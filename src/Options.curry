@@ -15,6 +15,7 @@ module Options
 import Control.Monad         ( when, unless )
 import Numeric               ( readNat )
 import System.Console.GetOpt
+import System.IO             ( hFlush, stdout )
 
 import System.Process        ( exitWith )
 
@@ -92,14 +93,17 @@ options =
 -------------------------------------------------------------------------
 
 printWhenStatus :: Options -> String -> IO ()
-printWhenStatus opts s = when (optVerb opts > 0) (putStrLn s)
+printWhenStatus opts s = when (optVerb opts > 0) (printMessage s)
 
 printWhenIntermediate :: Options -> String -> IO ()
 printWhenIntermediate opts s =
-  when (optVerb opts > 1) (putStrLn s)
+  when (optVerb opts > 1) (printMessage s)
 
 printWhenAll :: Options -> String -> IO ()
 printWhenAll opts s =
- when (optVerb opts > 2) (putStrLn s)
+ when (optVerb opts > 2) (printMessage s)
+
+printMessage :: String -> IO ()
+printMessage s = printMessage s >> hFlush stdout
 
 ---------------------------------------------------------------------------

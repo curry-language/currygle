@@ -22,7 +22,7 @@ import Settings      ( indexDirPath )
 banner :: String
 banner = unlines [bannerLine, bannerText, bannerLine]
  where
-  bannerText = "Currygle (Version " ++ packageVersion ++ " of 14/05/25)"
+  bannerText = "Currygle (Version " ++ packageVersion ++ " of 15/05/25)"
   bannerLine = take (length bannerText) (repeat '=')
 
 main :: IO ()

@@ -55,14 +55,14 @@ index:
 .PHONY: start
 start:
 ifeq ($(PID),)
-	@echo Starting search server...
-	nohup bin/$(CURRYGLE) --server > $(LOGFILE) 2>&1 &
+	@echo Starting search server at `date`... >> $(LOGFILE)
+	nohup bin/$(CURRYGLE) --server >> $(LOGFILE) 2>&1 &
 	@sleep 1
 	@/bin/rm -f TMPOUT
 	@ps x | grep $(CURRYGLE) > TMPOUT
 	@grep server TMPOUT | awk '{ print $$1 }' > $(PIDFILE)
 	@/bin/rm -f TMPOUT
-	@echo "Started $(CURRYGLE)..."
+	@echo "'$(CURRYGLE)' started..."
 else
 	@echo "$(CURRYGLE) is already running with PID $(PID)."
 endif
@@ -147,3 +147,4 @@ clean:
 	$(CPM) clean
 	rm -f $(WEBDIR)/*.cgi*
 	rm -f $(WEBDIR)/bin/$(CURRYGLE)
+	rm -f $(WEBDIR)/LOGFILE

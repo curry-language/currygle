@@ -42,7 +42,7 @@ getResultPage withserver searchtxt
                            (\_ -> return Nothing)
             case mbres of
               Nothing  -> do -- try to restart server:
-                             system "make restart > RESTARTLOG"
+                             system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
                             [(items,_)] -> getSearchPage searchtxt items
