@@ -12,6 +12,8 @@ import Data.List      ( intersperse )
 import System.IO
 
 import HTML.Base
+import HTML.Styles.Bootstrap4 ( kbdInput )
+import Network.URL     ( string2urlencoded, urlencoded2string )
 import System.FilePath ( (</>) )
 import System.Process  ( system )
 
@@ -25,7 +27,12 @@ import Search.SearchQuery
 import Server ( searchClient )
 
 main :: IO HtmlPage
-main = return defaultPage
+main = do
+  uparam <- fmap urlencoded2string getUrlParameter
+  if null uparam then return defaultPage
+                 else do let showall = take 4 uparam == ":all"
+                             query   = if showall then drop 4 uparam else uparam
+                         getResultPage True showall query
 
 -- Default page with Currygle description.
 defaultPage :: HtmlPage
@@ -33,8 +40,8 @@ defaultPage = curryglePage currygleDescription
 
 -- Gets an HtmlRef to a textfield, an HtmlEnv, and creates an HtmlPage from it,
 -- showing the search result for the String in the HtmlEnv under HtmlRef
-getResultPage :: Bool -> String -> IO HtmlPage
-getResultPage withserver searchtxt
+getResultPage :: Bool -> Bool -> String -> IO HtmlPage
+getResultPage withserver showall searchtxt
   | all isSpace searchtxt -- no query terms present
   = return defaultPage
   | otherwise
@@ -50,32 +57,40 @@ getResultPage withserver searchtxt
                              system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
-                            [(items,_)] -> return $ searchPage searchtxt items
+                            [(items,_)] -> return $ resultPage searchtxt items
                             _           -> return defaultPage
           else resultFromIndex query
  where
   resultFromIndex query = do
     index <- readIndex indexDirPath
-    return $ searchPage (searchtxt ++ " (search server not reachable)")
+    return $ resultPage (searchtxt ++ " (search server not reachable)")
                         (currygle2search index query)
 
-searchPage :: String -> [IndexItem] -> HtmlPage
-searchPage search items = curryglePage $
-  [ htxt $ "Search results for '" ++ search ++ "': "
-  , htxt $ "found " ++ show num ++ " entities" ++
-           if length items <= maxSearchResults
-             then ""
-             else " (showing " ++ show (min num maxSearchResults) ++ " results)"
-  , searchResults $ take maxSearchResults items]
- where num = length items
+  resultPage search items = curryglePage $
+    [ par $
+        [ italic [htxt $ "Search results for "]
+        , kbdInput [htxt search], htxt ": "
+        , htxt $ "found "
+        , htxt $ case num of 0 -> "no entity"
+                             1 -> "one entity"
+                             _ -> show num ++ " entities" ] ++
+        (if num <= maxresults
+           then []
+           else [ htxt $ " (showing " ++ show (min num maxresults) ++ " results, "
+                , href ('?' : string2urlencoded (":all" ++ search))
+                [htxt "show all"], htxt ")"])
+    , searchResults $ take maxresults items]
+   where
+    num        = length items
+    maxresults = if showall then num else maxSearchResults
 
 --- The search form consisting of a field and search button.
 searchForm :: HtmlFormDef ()
 searchForm = simpleFormDefWithID "WebQuery.searchForm"
   [ textField ref "" `addAttrs`
       [("class", "form-control mr-sm-2 flex-fill"),
-       ("placeholder","Search in Curry packages")],
-    addAttr (button "Search!" (\env -> getResultPage True (env ref)))
+       ("placeholder","Search entities in Curry packages")],
+    addAttr (button "Search!" (\env -> getResultPage True False (env ref)))
             ("class", "btn btn-outline-success my-2 my-sm-0")
   ]
  where ref free
@@ -83,25 +98,28 @@ searchForm = simpleFormDefWithID "WebQuery.searchForm"
 -- Format search results.
 searchResults :: [IndexItem] -> BaseHtml
 searchResults items =
-  table (map indexItemToHtml items)  `addClass` "table table-hover"
+  table (map itemToHtml items) `addClass` "table table-sm table-hover"
  where
-  indexItemToHtml :: IndexItem -> [[BaseHtml]]
-  indexItemToHtml (ModuleItem (ModuleIndex name author pack link des)) =
+  itemToHtml :: IndexItem -> [[BaseHtml]]
+  itemToHtml (ModuleItem (ModuleIndex name author pack link des)) =
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
         [h3 [htxt $ "module " ++ name],
          htxt "author: ", bold [htxt author], breakline,
          htxt "package: ", bold [htxt pack], breakline,
          htxt des]
     ]]
-  indexItemToHtml (FunctionItem (FunctionIndex name modName pack sig _ _ link des)) =
+  itemToHtml (FunctionItem (FunctionIndex name modName pack sig _ _ link des)) =
+    let sname = if null name || isAlpha (head name)
+                  then name
+                  else "(" ++ name ++ ")" in
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [bold [htxt $ name ++ " :: " ++ prettySigs sig], breakline,
+        [bold [htxt $ sname ++ " :: " ++ prettySigs sig], breakline,
          --htxt (show sig), breakline,
          htxt "defined in module: ", bold [htxt modName], breakline,
          htxt "of package: ", bold [htxt pack], breakline,
          htxt des]
     ]]
-  indexItemToHtml (TypeItem (TypeIndex name modName pack isClass _ link des)) =
+  itemToHtml (TypeItem (TypeIndex name modName pack isClass _ link des)) =
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
         [h3 [htxt $ (if isClass then "class " else "data ") ++ name],
          htxt "defined in module: ", bold [htxt modName], breakline,
@@ -109,19 +127,29 @@ searchResults items =
          htxt des]
     ]]
 
+-- The description of Currygle in HTML format.
 currygleDescription :: [BaseHtml]
 currygleDescription =
-  [ h4 [htxt "Options to restrict the restrict the search:"]
+  [ h4 [htxt "Options to restrict the search:"]
   , headedTable (map (\(x,y,z) -> [[htxt x], [htxt y], [htxt z]])
       [ ("Long form:", "Abbreviation:", "Explanation:")
-      , (":module <module name>", ":m <module name>", "all modules containing <module name> in their name")
-      , (":function <function name>", ":f <function name>", "all functions containing <function name> in their name")
-      , (":class <class name>", ":c <class name>", "all classes containing <class name> in their name")
-      , (":type <type name>", ":t <type name>", "all types containing <type name> in their name")
-      , (":inmodule <module name>", ":im <module name>", "all entities in modules containing <module name> in their name")
-      , (":inpackage <package name>", ":ip <package name>", "all entities in packages containing <package name> in their name")
-      , (":author <author name>", ":a <author name>", "all modules whose author contains <author name> in their name")
-      , (":signature <signature>", ":s <signature>", "all functions containing <signature> in their signature, or types containing a constructor containing <signature>")
+      , (":module <module name>", ":m <module name>"
+        , "all modules containing <module name> in their name")
+      , (":function <function name>", ":f <function name>"
+        , "all functions containing <function name> in their name")
+      , (":class <class name>", ":c <class name>"
+        , "all classes containing <class name> in their name")
+      , (":type <type name>", ":t <type name>"
+        , "all types containing <type name> in their name")
+      , (":inmodule <module name>", ":im <module name>"
+        , "all entities in modules containing <module name> in their name")
+      , (":inpackage <package name>", ":ip <package name>"
+        , "all entities in packages containing <package name> in their name")
+      , (":author <author name>", ":a <author name>"
+        , "all modules whose author contains <author name> in their name")
+      , (":signature <signature>", ":s <signature>"
+        , "all functions containing <signature> in their signature, " ++
+          "or types containing a constructor containing <signature>")
       , (":det", ":det", "all deterministic functions")
       , (":nondet", ":nd", "all non-deterministic functions")
       , (":flexible", ":fl", "all flexible functions")
@@ -132,42 +160,26 @@ currygleDescription =
         , htxt "operators to combine several options."
         , htxt "Options can be enclosed in curly braces to allow nested "
         , htxt "expressions." ]
-  ]
-
-currygleDescription' :: BaseHtml
-currygleDescription' = par $ intersperse breakline $ map htxt
-  [ "Possible search queries:"
-  , ":module <module name> or :m <module name>: finds all modules containing <module name> in their name"
-  , ":function <function name> finds all functions containing <function name> in their name,  abbreviation :f  "
-  , ":class <class name> finds all classes containing <class name> in their name,  abbreviation :c  "
-  , ":type <type name> finds all types containing <type name> in their name,  abbreviation :t  "
-  , ":inmodule <module name> finds all entities in modules containing <module name> in their name,  abbreviation :im  "
-  , ":inpackage <package name> finds all entities in packages containing <package name> in their name,  abbreviation :ip  "
-  , ":author <author name> finds all modules whose author contains <author name> in their name,  abbreviation :a  "
-  , ":signature <signature> takes a signature like it is written in Curry code and returns all functions containing the signature in their signature, or types containing a constructor containing the signature. abbreviation :s  "
-  , ":det returns all deterministic functions  "
-  , ":nondet returns all non-deterministic functions, abbreviation :nd  "
-  , ":flexible returns all flexible functions, abbreviation :fl  "
-  , ":rigid returns all rigid functions, abbreviation :r  "
-  , "  "
-  , "All these searches can be connected with the junctors AND, OR and NOT"
-  , "{} can be used to structure the query."
+  , par [ htxt "Example: the query ", code [htxt ":im Prelude AND :nondet"]
+        , htxt " shows all non-deterministc operations defined in the "
+        , htxt "standard prelude." ]
   ]
 
 ------------------------------------------------------------------------------
--- Standard form in Curry pages:
+-- The standard page of Currgle form in Curry pages:
 curryglePage :: [BaseHtml] -> HtmlPage
 curryglePage contents =
-  HtmlPage "Currygle"
+  HtmlPage "Curr(y)gle"
     ([pageEnc "utf-8", responsiveView] ++
      [pageLinkInfo [("rel","shortcut icon"), ("href",favIcon)]] ++
      map pageCSS cssIncludes)
     [htmlStruct "nav"  -- top navigation bar
       [("class","navbar navbar-expand-md navbar-dark fixed-top bg-dark")]
-      [href "?" [h1 [htxt "Currygle"]] `addClass` "navbar-brand",
+      [href "?" [h1 [htxt "Curr(y)gle"]] `addClass` "navbar-brand",
        formElemWithAttrs searchForm
          [("class","form-inline flex-fill"),
-          ("title", "Query to search in module of Curry packages")]],
+          ("title",
+           "Query to search entities occurring in modules of Curry packages")]],
      blockstyle "container-fluid" $
        [blockstyle "row" [blockstyle (bsCols 12) contents],
         hrule,
