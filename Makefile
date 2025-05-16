@@ -38,7 +38,7 @@ PIDFILE = server.pid
 PID := $(shell if [ -f $(PIDFILE) ] ; then cat $(PIDFILE) ; else echo "" ; fi)
 
 # The main module of the webapp:
-WEBAPPMAIN = HtmlGenerator
+WEBAPPMAIN = WebQuery
 
 ############################################################################
 

@@ -3,7 +3,7 @@
 module Index.Signature
     where
 
-import Data.List  ( intercalate )
+import Data.List  ( intercalate, scanl )
 import System.IO
 
 import FlatCurry.Types
@@ -59,9 +59,14 @@ leSigList (s1:sigs1) (s2:sigs2) = if s1 == s2 then leSigList sigs1 sigs2 else s1
 typeExprToSignature :: TypeExpr -> Signature
 typeExprToSignature (TVar i)            = Var i
 typeExprToSignature (FuncType s1 s2)    = Function (typeExprToSignature s1) (typeExprToSignature s2)
--- We ignore the package name for Constant variable names in our search
+-- We ignore the module name for Constant variable names in our search
 typeExprToSignature (TCons (_,n2) tes) = Type n2 (map typeExprToSignature tes)
 typeExprToSignature (ForallType _ te)   = typeExprToSignature te
+
+signatureToTypeExpr :: Signature -> TypeExpr
+signatureToTypeExpr (Var i)          = (TVar i)
+signatureToTypeExpr (Function s1 s2) = FuncType (signatureToTypeExpr s1) (signatureToTypeExpr s2)
+signatureToTypeExpr (Type n2 tes)    = TCons ("",n2) (map signatureToTypeExpr tes)
 
 -- Does a flat seperation of a signature to a list. So a -> b becomes [a,b],
 -- and (a->b)->b becomes [(a->b), b]
@@ -72,22 +77,44 @@ seperateSig (Function s1 s2)    = s1 : seperateSig s2
 
 -- Shows a list of Signatures as a Function
 prettySigs :: [Signature] -> String
-prettySigs [] = ""
-prettySigs [x] = prettySig x
-prettySigs (x:y:xs) = prettySig x ++ " -> " ++ prettySigs (y:xs)
+prettySigs []       = ""
+prettySigs [x]      = prettySig False x
+prettySigs (x:y:xs) = case isClassContext x of
+  Nothing      -> prettySig False x ++ " -> " ++ prettySigs (y:xs)
+  Just (tc,ts) -> prettySig False (Type tc ts) ++ " => " ++ prettySigs (y:xs)
 
 -- Shows a single signature in a pretty way
-prettySig :: Signature -> String
-prettySig (Var i) = [chr (i + 97)]
-prettySig (Function s1 s2) = "(" ++ prettySigs [s1, s2] ++ ")"
-prettySig (Type name args)
+prettySig :: Bool -> Signature -> String
+prettySig _  (Var i) = [chr (i + 97)]
+prettySig br (Function s1 s2) = bracketIf True (prettySigs [s1, s2])
+prettySig br (Type name args)
   | name == "[]" && length args == 1
-  = "[" ++ prettySig (head args) ++ "]"
+  = "[" ++ prettySig False (head args) ++ "]"
   | take 2 name == "(,"
-  = "(" ++ intercalate "," (map prettySig args) ++ ")"
+  = "(" ++ intercalate "," (map (prettySig False) args) ++ ")"
+  | name == "Apply" && length args == 2 -- type constructore application
+  = bracketIf br (prettySig True (head args) ++ " " ++ prettySig True (args!!1))
   | otherwise
-  = name ++ concatMap (\x -> " " ++ prettySig x) args
+  = bracketIf (br && not (null args))
+      (intercalate " " (name : map (prettySig True) args))
 
+bracketIf :: Bool -> String -> String
+bracketIf wb s = if wb then "(" ++ s ++ ")" else s
+
+--- Tests whether a FlatCurry type is a class context.
+--- If it is the case, return the class name and the type parameters
+--- of the class context.
+isClassContext :: Signature -> Maybe (String,[Signature])
+isClassContext texp = case texp of
+  Type tc ts                           -> checkDictCons tc ts
+  -- a class context might be represented as function `() -> Dict`:
+  Function (Type "()" []) (Type tc ts) -> checkDictCons tc ts
+  _                                    -> Nothing
+ where
+  checkDictCons tc ts | take 6 tc == "_Dict#" = Just (drop 6 tc, ts)
+                      | otherwise             = Nothing
+
+------------------------------------------------------------------------------
 -- Auto generated code for rw-data
 
 instance ReadWrite Signature where

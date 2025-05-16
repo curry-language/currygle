@@ -1,0 +1,32 @@
+/* Changes to default bootstrap style: */
+
+body {
+  padding-top: 80px;
+  padding-bottom: 40px;
+}
+
+.jumbotron {
+  padding: 25px 20px;
+  margin-bottom: 15px;
+}
+
+.jumbotron h1 {
+  margin-bottom: 10px;
+  font-size: 40px;
+
+.jumbotron a:hover {
+  text-decoration: none;
+}
+
+.table {
+  width: auto;
+}
+
+/* padding for in-page bookmarks and fixed navbar */
+section {
+  padding-top: 60px;
+}
+
+a {
+  text-decoration: none;
+}
