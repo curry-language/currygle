@@ -12,7 +12,7 @@ import System.Environment ( getArgs )
 
 import System.Process     ( exitWith )
 
-import Interactive   ( runSearchLocally )
+import Interactive   ( searchInteractive )
 import Index.Indexer ( createIndexFromDir, writeIndex )
 import Options
 import PackageConfig ( packageVersion )
@@ -22,7 +22,7 @@ import Settings      ( indexDirPath )
 banner :: String
 banner = unlines [bannerLine, bannerText, bannerLine]
  where
-  bannerText = "Currygle (Version " ++ packageVersion ++ " of 15/05/25)"
+  bannerText = "Currygle (Version " ++ packageVersion ++ " of 17/05/25)"
   bannerLine = take (length bannerText) (repeat '=')
 
 main :: IO ()
@@ -44,6 +44,6 @@ main = do
   when (optStopServer opts)  $ stopServer  opts >> exitWith 0
   when (optInteractive opts) $ do
     printWhenStatus opts "Running query search in interactive mode:"
-    runSearchLocally indexdir
+    searchInteractive indexdir
     exitWith 0
   putStrLn "No execution mode specified. Use '--help' for usage information."

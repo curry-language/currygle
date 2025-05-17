@@ -17,11 +17,11 @@ import System.Process ( system )
 import Index.IndexItem
 import Index.Indexer
 import Index.Signature
-import PackageConfig ( packageVersion )
+import PackageConfig      ( packageVersion )
 import Settings
 import Search.Search
 import Search.SearchQuery
-import Server ( searchClient )
+import Server             ( searchClient )
 
 main :: IO HtmlPage
 main = getDefaultPage
@@ -52,7 +52,7 @@ getResultPage withserver searchtxt
   resultFromIndex query = do
     index <- readIndex indexDirPath
     getSearchPage (searchtxt ++ " (search server not reachable)")
-                  (currygle2search index query)
+                  (currygleSearch index query)
 
 getSearchPage :: String -> [IndexItem] -> IO HtmlPage
 getSearchPage search items = do
@@ -104,7 +104,8 @@ getResultBody items = (map indexItemToHtml items)
             htxt $ take 100 des, breakline]
         ]
     indexItemToHtml (TypeItem (TypeIndex name modName pack isClass _ link des)) =
-        BaseStruct "div" [("onclick","window.location='"++link++"';"),("class", "curryentity")]
+        BaseStruct "div" [("onclick","window.location='"++link++"';"),
+                          ("class", "curryentity")]
           [ par [
               h3 [htxt $ (if isClass then "class " else "data ") ++ name],
               htxt $ "module: " ++ modName, breakline,

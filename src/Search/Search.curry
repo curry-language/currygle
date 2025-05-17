@@ -3,12 +3,19 @@
 --- a list of IndexItems a score how well they match a searchQuery.
 --- This is the core search functionality of currygle2
 ---
---- @author Helge Knof
---- @version 07.12.2024
+--- @author Helge Knof (with changes by Michael Hanus)
+--- @version May 2025
 ----------------------------------------------------------------------
-module Search.Search (currygle2search)
+
+module Search.Search ( currygleSearch, profilingCurrygleSearch )
     where
 
+import Data.List
+import Data.Maybe
+
+import Data.Map
+import FlatCurry.FlexRigid
+import Debug.Profile       ( getElapsedTimeNF )
 import Index.Indexer
 import Index.IndexTrie
 import Index.IndexItem
@@ -16,14 +23,15 @@ import Index.Signature hiding (Function, Type)
 import Search.SearchQuery
 import Settings
 
+--- Search query in the given index.
+currygleSearch :: Index -> SearchQuery -> [IndexItem]
+currygleSearch index sq = map fst (toIndexItems index (search sq index))
 
-import FlatCurry.FlexRigid
-import Data.Map
-import Data.Maybe
-import Data.List
-
-currygle2search :: Index -> SearchQuery -> [IndexItem]
-currygle2search index sq = map fst (toIndexItems index (search sq index))
+--- Search query in the given index and return the results together with
+--- the elapsed time of the search.
+profilingCurrygleSearch :: Index -> SearchQuery -> IO ([IndexItem],Int)
+profilingCurrygleSearch index sq =
+  getElapsedTimeNF (return $ currygleSearch index sq)
 
 search :: SearchQuery -> Index -> Map Int Int
 search (Single st) index   = searchForTerm st index

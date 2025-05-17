@@ -20,11 +20,11 @@ import System.Process  ( system )
 import Index.IndexItem
 import Index.Indexer
 import Index.Signature
-import PackageConfig ( packageVersion )
+import PackageConfig      ( packageVersion )
 import Settings
 import Search.Search
 import Search.SearchQuery
-import Server ( searchClient )
+import Server             ( profilingSearchClient, searchClient )
 
 main :: IO HtmlPage
 main = do
@@ -50,34 +50,36 @@ getResultPage withserver showall searchtxt
       Just query ->
         if withserver
           then do
-            mbres <- catch (searchClient searchtxt >>= return . Just)
+            mbres <- catch (profilingSearchClient searchtxt >>= return . Just)
                            (\_ -> return Nothing)
             case mbres of
               Nothing  -> do -- try to restart server:
                              system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
-                            [(items,_)] -> return $ resultPage searchtxt items
-                            _           -> return defaultPage
+                            [((items,et),_)] -> return $ resultPage "" items et
+                            _                -> return defaultPage
           else resultFromIndex query
  where
   resultFromIndex query = do
     index <- readIndex indexDirPath
-    return $ resultPage (searchtxt ++ " (search server not reachable)")
-                        (currygle2search index query)
+    return $ resultPage " (slow search since server not reachable)"
+                        (currygleSearch index query) 0
 
-  resultPage search items = curryglePage $
+  resultPage note items etime = curryglePage $
     [ par $
         [ italic [htxt $ "Search results for "]
-        , kbdInput [htxt search], htxt ": "
+        , kbdInput [htxt searchtxt], htxt $ note ++ ": "
         , htxt $ "found "
         , htxt $ case num of 0 -> "no entity"
                              1 -> "one entity"
-                             _ -> show num ++ " entities" ] ++
+                             _ -> show num ++ " entities"
+        , htxt $ if etime==0 then "" else " in " ++ show etime ++ " ms" ] ++
         (if num <= maxresults
            then []
-           else [ htxt $ " (showing " ++ show (min num maxresults) ++ " results, "
-                , href ('?' : string2urlencoded (":all" ++ search))
+           else [ htxt $ " (showing " ++ show (min num maxresults) ++
+                         " results, "
+                , href ('?' : string2urlencoded (":all" ++ searchtxt))
                 [htxt "show all"], htxt ")"])
     , searchResults $ take maxresults items]
    where

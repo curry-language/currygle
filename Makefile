@@ -44,7 +44,7 @@ WEBAPPMAIN = WebQuery
 
 .PHONY: all
 all:
-	@echo "make: index start stop restart deploy install tar clean?"
+	@echo "make: index start stop restart install indexer deploy tar clean?"
 
 # Create index:
 .PHONY: index
@@ -105,7 +105,10 @@ $(WEBDIR):
 	mkdir -p $(WEBDIR)
 
 # Install indexer and search tool:
-$(WEBDIR)/bin/$(CURRYGLE): | $(WEBDIR)
+.PHONY: indexer
+indexer: $(WEBDIR)/bin/$(CURRYGLE)
+
+$(WEBDIR)/bin/$(CURRYGLE): src/*.curry src/*/*.curry | $(WEBDIR)
 	mkdir -p $(WEBDIR)/bin
 	$(CPM) --define BIN_INSTALL_PATH=$(WEBDIR)/bin install
 

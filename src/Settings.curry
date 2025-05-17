@@ -54,7 +54,7 @@ indexDirPath = "INDEX"
 
 -- The standard socket used by the Currygle search server.
 serverSocket :: Int
-serverSocket = 12345
+serverSocket = 12354
 
 -- Returns the URL of the online documentation for a package and module name.
 moduleDocumentationUrl :: String -> String -> String

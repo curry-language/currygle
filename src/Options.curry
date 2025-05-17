@@ -8,7 +8,7 @@
 module Options
   ( Options(..), defaultOptions
   , processOptions, usageText
-  , printWhenStatus, printWhenIntermediate, printWhenAll
+  , printWhenStatus, printWhenIntermediate, printWhenAll, printMessage
   )
  where
 
@@ -104,6 +104,6 @@ printWhenAll opts s =
  when (optVerb opts > 2) (printMessage s)
 
 printMessage :: String -> IO ()
-printMessage s = printMessage s >> hFlush stdout
+printMessage s = putStrLn s >> hFlush stdout
 
 ---------------------------------------------------------------------------
