@@ -133,38 +133,44 @@ searchResults items =
 currygleDescription :: [BaseHtml]
 currygleDescription =
   [ h4 [htxt "Options to restrict the search:"]
-  , headedTable (map (\(x,y,z) -> [[htxt x], [htxt y], [htxt z]])
-      [ ("Long form:", "Abbreviation:", "Explanation:")
-      , (":module <module name>", ":m <module name>"
+  , headedTable (map (\(x,y) -> [[htxt x], [htxt y]])
+      [ ("Option:", "Explanation:")
+      , (":module <module name>"
         , "all modules containing <module name> in their name")
-      , (":function <function name>", ":f <function name>"
+      , (":function <function name>"
         , "all functions containing <function name> in their name")
-      , (":class <class name>", ":c <class name>"
+      , (":class <class name>"
         , "all classes containing <class name> in their name")
-      , (":type <type name>", ":t <type name>"
+      , (":type <type name>"
         , "all types containing <type name> in their name")
-      , (":inmodule <module name>", ":im <module name>"
+      , (":inmodule <module name>"
         , "all entities in modules containing <module name> in their name")
-      , (":inpackage <package name>", ":ip <package name>"
+      , (":inpackage <package name>"
         , "all entities in packages containing <package name> in their name")
-      , (":author <author name>", ":a <author name>"
+      , (":author <author name>"
         , "all modules whose author contains <author name> in their name")
-      , (":signature <signature>", ":s <signature>"
+      , (":signature <signature>"
         , "all functions containing <signature> in their signature, " ++
           "or types containing a constructor containing <signature>")
-      , (":det", ":det", "all deterministic functions")
-      , (":nondet", ":nd", "all non-deterministic functions")
-      , (":flexible", ":fl", "all flexible functions")
-      , (":rigid", ":r", "all rigit functions")
+      , (":deterministic", "all deterministic operations")
+      , (":nondeterministic", "all non-deterministic operations")
+      , (":flexible", "all flexible operations")
+      , (":rigid", "all rigid operations")
       ])
       `addClass` "table table-striped table-sm"
   , par [ htxt "The keywords  AND, OR and NOT can be used as binary infix "
         , htxt "operators to combine several options."
         , htxt "Options can be enclosed in curly braces to allow nested "
         , htxt "expressions." ]
-  , par [ htxt "Example: the query ", code [htxt ":im Prelude AND :nondet"]
-        , htxt " shows all non-deterministc operations defined in the "
-        , htxt "standard prelude." ]
+  , par [ htxt "The option keywords can be abbreviated where the abbreviation "
+        , htxt "should be unique. If an abbreviation is not unique, "
+        , htxt "the first possibility according to this table is taken." ]
+  , par [ htxt "Example: the following queries show all non-deterministic "
+        , htxt "operations defined in the standard prelude:", breakline
+        , code [htxt ":inmodule Prelude AND :nondeteterministic"], breakline
+        , code [htxt ":inm Prelude AND :nondet"], breakline
+        , code [htxt ":i Prelude AND :n"]
+        ]
   ]
 
 ------------------------------------------------------------------------------

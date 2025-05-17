@@ -15,6 +15,7 @@ import System.IO
 import Network.Socket
 import System.Process     ( sleep )
 
+import Index.Helper       ( strip )
 import Index.Indexer
 import Index.IndexItem
 import Options
@@ -80,8 +81,6 @@ serverLoopOnHandle opts socket index handle = do
     hPutStrLn handle resultstring
     hFlush handle
     serverLoopOnHandle opts socket index handle
-  
-  strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
 -- This action reads from a handle until it reaches EOL or EOF.
 hGetLineUntilEOF  :: Handle -> IO String

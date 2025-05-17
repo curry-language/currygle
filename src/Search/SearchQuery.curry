@@ -9,13 +9,15 @@ module Search.SearchQuery (SearchQuery(..), SearchTerm(..),
                             parseSearchText)
   where
 
+import Data.Char
+import Data.List              ( isPrefixOf )
+import FlatCurry.Types
+
+import Index.Helper           ( strip )
 import Index.Indexer
 import Index.IndexItem
 import Index.Signature
 import Search.SignatureParser
-
-import FlatCurry.Types
-import Data.Char
 
 -- The SearchQuery is a tree which has the SearchTerms as leaves,
 -- and AND, OR or NOT AND as the inner nodes
@@ -117,49 +119,52 @@ splitByClosingCurlyBracket (c:cs) n | c == '}' && n >  1 = case splitByClosingCu
                                                               Nothing       -> Nothing
                                                               Just (s1,s2)  -> Just (c:s1,s2)
     
--- Parses a SearchTerm. A searchterm ends either, because of the next AND, OR, Not, the end of the string,
+-- Parses a SearchTerm. A SearchTerm ends either, because of the next AND, OR, Not, the end of the string,
 -- a : indicating the start of the next searchterm, or an error, because the word after the : is not valid
 parseSearchTerm :: String -> (SearchTerm, String)
-parseSearchTerm text = let (toBeParsed, leftOver) = getStringUntilEndOfSearchTerm text in
-                            if take 7 toBeParsed == ":module" then (Module (adjustTerm (drop 7 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":m" then (Module (adjustTerm (drop 2 toBeParsed)), leftOver) else
-                            if take 9 toBeParsed == ":inmodule" then (InModule (adjustTerm (drop 9 toBeParsed)), leftOver) else
-                            if take 3 toBeParsed == ":im" then (InModule (adjustTerm (drop 3 toBeParsed)), leftOver) else
-                            if take 10 toBeParsed == ":inpackage" then (InPackage (adjustTerm (drop 10 toBeParsed)), leftOver) else
-                            if take 3 toBeParsed == ":ip" then (InPackage (adjustTerm (drop 3 toBeParsed)), leftOver) else
-                            if take 9 toBeParsed == ":function" then (Function (adjustTerm (drop 9 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":f" then (Function (adjustTerm (drop 2 toBeParsed)), leftOver) else
-                            if take 5 toBeParsed == ":type" then (Type (adjustTerm (drop 5 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":t" then (Type (adjustTerm (drop 2 toBeParsed)), leftOver) else
-                            if take 6 toBeParsed == ":class" then (Class (adjustTerm (drop 6 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":c" then (Class (adjustTerm (drop 2 toBeParsed)), leftOver) else
-                            if take 7 toBeParsed == ":author" then (Author (adjustTerm (drop 7 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":a" then (Author (adjustTerm (drop 2 toBeParsed)), leftOver) else
-                            if take 4 toBeParsed == ":det" then (Det, leftOver) else
-                            if take 7 toBeParsed == ":nondet" then (NonDet, leftOver) else
-                            if take 3 toBeParsed == ":nd" then (NonDet, leftOver) else
-                            if take 9 toBeParsed == ":flexible" then (Flexible, leftOver) else
-                            if take 3 toBeParsed == ":fl" then (Flexible, leftOver) else
-                            if take 6 toBeParsed == ":rigid" then (Rigid, leftOver) else
-                            if take 2 toBeParsed == ":r" then (Rigid, leftOver) else
-                            if take 10 toBeParsed == ":signature" then (Signature (parseSignature (drop 10 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":s" then (Signature (parseSignature (drop 2 toBeParsed)), leftOver) else
-                            if take 4 toBeParsed == ":all" then (All (adjustTerm (drop 4 toBeParsed)), leftOver) else
-                            if take 2 toBeParsed == ":a" then (All (adjustTerm (drop 2 toBeParsed)), leftOver) else
-                            (All (adjustTerm toBeParsed), leftOver)
-    where
-        -- Gets all of the String until the next part of the SearchQuery, including the deliminator at the beginning, if one exists.
-        -- Also deletes leading white spaces
-        getStringUntilEndOfSearchTerm :: String -> (String, String)
-        getStringUntilEndOfSearchTerm input = if head input == ':' then
-                                                (':' : (fst (parseUntilNextDeliminator (drop 1 input))),
-                                                  snd(parseUntilNextDeliminator (drop 1 input)))
-                                             else
-                                                (fst (parseUntilNextDeliminator input),
-                                                 snd (parseUntilNextDeliminator input))
-        -- Removes spaces from front and back
-        adjustTerm :: String -> String
-        adjustTerm str = map toLower (reverse (dropWhile (\x -> x == ' ') (reverse (dropWhile (\x -> x == ' ') str))))
+parseSearchTerm text =
+  let (toBeParsed, leftOver) = getStringUntilEndOfSearchTerm text
+      (wd,wds) = break (==' ') toBeParsed
+  in if take 1 wd == ":"
+       then case completeOption (tail wd) of
+              "module"           -> (Module (adjustTerm wds), leftOver)
+              "inmodule"         -> (InModule (adjustTerm wds), leftOver)
+              "inpackage"        -> (InPackage (adjustTerm wds), leftOver)
+              "function"         -> (Function (adjustTerm wds), leftOver)
+              "type"             -> (Type (adjustTerm wds), leftOver)
+              "class"            -> (Class (adjustTerm wds), leftOver)
+              "author"           -> (Author (adjustTerm wds), leftOver)
+              "signature"        -> (Signature (parseSignature wds), leftOver)
+              "deterministic"    -> (Det, leftOver)
+              "nondeterministic" -> (NonDet, leftOver)
+              "flexible"         -> (Flexible, leftOver)
+              "rigid"            -> (Rigid, leftOver)
+              _                  -> (All (adjustTerm toBeParsed), leftOver)
+       else (All (adjustTerm toBeParsed), leftOver)
+ where
+  -- complete abbreviated options (take the first if not unique)
+  completeOption s = case filter (s `isPrefixOf`) options of (o:_) -> o
+                                                             _     -> ""
+
+  options = [ "module", "function", "class", "type", "inmodule", "inpackage"
+            , "author", "signature", "deterministic", "nondeterministic"
+            , "flexible", "rigid"]
+
+  -- Gets all of the String until the next part of the SearchQuery,
+  -- including the deliminator at the beginning, if one exists.
+  -- Also deletes leading white spaces
+  getStringUntilEndOfSearchTerm :: String -> (String, String)
+  getStringUntilEndOfSearchTerm input
+    | head input == ':'
+    = (':' : (fst (parseUntilNextDeliminator (drop 1 input))),
+       snd(parseUntilNextDeliminator (drop 1 input)))
+    | otherwise
+    = (fst (parseUntilNextDeliminator input),
+       snd (parseUntilNextDeliminator input))
+
+  -- Removes spaces from front and back
+  adjustTerm :: String -> String
+  adjustTerm = map toLower . strip
 
 -- Gets a String, goes until the next {, }, :, AND, OR or NOT, and returns the String it walked through, as well as
 -- the rest String

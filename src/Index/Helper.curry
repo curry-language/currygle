@@ -13,6 +13,10 @@ import System.IO  ( hPutChar )
 import Data.Map
 import RW.Base
 
+-- Strips leading and trailing spaces from a string.
+strip :: String -> String
+strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
 ------------------------------------------------------------------------------
 --- `ReadWrite` instance of `Map`.
 instance (ReadWrite a,ReadWrite b) => ReadWrite (Map a b) where
