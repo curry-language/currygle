@@ -22,12 +22,13 @@ import Search.SignatureParser
 -- The SearchQuery is a tree which has the SearchTerms as leaves,
 -- and AND, OR or NOT AND as the inner nodes
 data SearchQuery = Single SearchTerm 
-                | AND SearchQuery SearchQuery   
-                | OR  SearchQuery SearchQuery
-                | NOT SearchQuery SearchQuery
-    deriving Show
+                 | AND SearchQuery SearchQuery   
+                 | OR  SearchQuery SearchQuery
+                 | NOT SearchQuery SearchQuery
+  deriving Show
 
-data SearchTerm = Module String
+data SearchTerm = Description String
+                | Module String
                 | InModule String
                 | InPackage String
                 | Function String
@@ -45,37 +46,38 @@ data SearchTerm = Module String
 -- Parses a searchtext into a searchquery
 parseSearchText :: String -> Maybe SearchQuery
 parseSearchText text = case parseSearchQuery text of
-                            Nothing -> Nothing
-                            Just (sq, _) -> Just sq
+  Nothing      -> Nothing
+  Just (sq, _) -> Just sq
 
--- Gets a String from the user, and turns it into a SearchQuery. It parses until it finds a curly bracket it didn't
--- open, or the String ends
+-- Transforms a query string into a SearchQuery.
+-- It parses until it finds a curly bracket it didn't open, or the String ends
 parseSearchQuery :: String -> Maybe (SearchQuery, String)
-parseSearchQuery query =  let query1 = dropWhile (\x -> x == ' ') query in
-                            if head query1 == '}' then
-                              Nothing
-                            else if head query1 == '{' then
-                              case splitByClosingCurlyBracket (drop 1 query1) 1 of
-                                Nothing -> Nothing
-                                Just (n, l) ->  if l == "" then
-                                                  parseSearchQuery n
-                                                else case getNextJunctor l of
-                                                  Nothing -> case parseSearchQuery n of
-                                                                  Nothing -> Nothing
-                                                                  Just (sq1, _) -> case parseSearchQuery l of
-                                                                    Nothing -> Nothing
-                                                                    Just (sq2, _) -> Just (AND sq1 sq2, "")
-                                                  Just (j, jl) -> case parseSearchQuery n of
-                                                    Nothing -> Nothing
-                                                    Just (sq, _) -> parseJunctor sq (drop jl l) j
-                            else
-                              let (sq,left) = parseSingle query1 in
-                                if dropWhile (\x -> x == ' ') left == "" then
-                                  Just (sq, "")
-                                else
-                                  case getNextJunctor left of
-                                    Nothing -> Just (parseSingle left)
-                                    Just (j, jl) -> parseJunctor sq (drop jl left) j
+parseSearchQuery query = 
+  let query1 = dropWhile (\x -> x == ' ') query in
+  if head query1 == '}' then
+    Nothing
+  else if head query1 == '{' then
+    case splitByClosingCurlyBracket (drop 1 query1) 1 of
+      Nothing -> Nothing
+      Just (n, l) ->  if null l then
+                        parseSearchQuery n
+                      else case getNextJunctor l of
+                        Nothing -> case parseSearchQuery n of
+                                        Nothing -> Nothing
+                                        Just (sq1, _) -> case parseSearchQuery l of
+                                          Nothing -> Nothing
+                                          Just (sq2, _) -> Just (AND sq1 sq2, "")
+                        Just (j, jl) -> case parseSearchQuery n of
+                          Nothing -> Nothing
+                          Just (sq, _) -> parseJunctor sq (drop jl l) j
+  else
+    let (sq,left) = parseSingle query1 in
+      if dropWhile (\x -> x == ' ') left == "" then
+        Just (sq, "")
+      else
+        case getNextJunctor left of
+          Nothing -> Just (parseSingle left)
+          Just (j, jl) -> parseJunctor sq (drop jl left) j
 
 parseSingle :: String -> (SearchQuery, String)
 parseSingle text = (Single (fst(parseSearchTerm text)), snd(parseSearchTerm text))
@@ -148,7 +150,7 @@ parseSearchTerm text =
 
   options = [ "module", "function", "class", "type", "inmodule", "inpackage"
             , "author", "signature", "deterministic", "nondeterministic"
-            , "flexible", "rigid"]
+            , "flexible", "rigid" ]
 
   -- Gets all of the String until the next part of the SearchQuery,
   -- including the deliminator at the beginning, if one exists.

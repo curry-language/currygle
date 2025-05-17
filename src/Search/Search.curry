@@ -44,7 +44,7 @@ search (NOT sq1 sq2) index = difference (search sq1 index) (search sq2 index)
 
 -- Converts a search result into a sorted list of index items, using the index as a translation
 toIndexItems :: Index -> Map Int Int -> [(IndexItem, Int)]
-toIndexItems (Index items _ _ _ _ _ _ _ _ _) scores 
+toIndexItems (Index items _ _ _ _ _ _ _ _ _ _) scores 
     = sortBy (\(_,x1) (_,x2) -> x1<x2) (toIndexItemsRec items scores 0)
     where
         toIndexItemsRec :: [IndexItem] -> Map Int Int -> Int -> [(IndexItem, Int)]
@@ -54,45 +54,45 @@ toIndexItems (Index items _ _ _ _ _ _ _ _ _) scores
                                         Just i  -> (x, i) : (toIndexItemsRec xs m (n+1))
 
 searchForTerm :: SearchTerm -> Index -> Map Int Int
-searchForTerm (Module st) (Index items modName _ _ _ _ _ _ _ _) =
+searchForTerm (Description st) (Index _ descr _ _ _ _ _ _ _ _ _) =
+    textSearch descr (toLowerStr st)
+searchForTerm (Module st) (Index items _ modName _ _ _ _ _ _ _ _) =
     filterForModule items (trieSearch modName (toLowerStr st))
-searchForTerm (InModule st) (Index _ modName _ _ _ _ _ _ _ _) =
+searchForTerm (InModule st) (Index _ _ modName _ _ _ _ _ _ _ _) =
     textSearch modName (toLowerStr st)
-searchForTerm (InPackage st) (Index _ _ packName _ _ _ _ _ _ _) =
+searchForTerm (InPackage st) (Index _ _ _ packName _ _ _ _ _ _ _) =
     textSearch packName (toLowerStr st)
-searchForTerm (Function st) (Index _ _ _ fun _ _ _ _ _ _) =
+searchForTerm (Function st) (Index _ _ _ _ fun _ _ _ _ _ _) =
     textSearch fun (toLowerStr st)
-searchForTerm (Type st) (Index _ _ _ _ t _ _ _ _ _) =
+searchForTerm (Type st) (Index _ _ _ _ _ t _ _ _ _ _) =
     textSearch t (toLowerStr st)
-searchForTerm (Class st) (Index _ _ _ _ _ c _ _ _ _) =
+searchForTerm (Class st) (Index _ _ _ _ _ _ c _ _ _ _) =
     textSearch c (toLowerStr st)
-searchForTerm (Author st) (Index _ _ _ _ _ _ author _ _ _) =
+searchForTerm (Author st) (Index _ _ _ _ _ _ _ author _ _ _) =
     textSearch author st
-searchForTerm (Det) (Index _ _ _ _ _ _ _ det _ _) =
+searchForTerm Det (Index _ _ _ _ _ _ _ _ det _ _) =
     cleanMap det (\x -> x) (\_ -> 0)
-searchForTerm (NonDet) (Index _ _ _ _ _ _ _ det _ _) =
+searchForTerm NonDet (Index _ _ _ _ _ _ _ _ det _ _) =
     cleanMap det (\x -> not x) (\_ -> 0)
-searchForTerm (Flexible) (Index _ _ _ _ _ _ _ _ flex _) =
+searchForTerm Flexible (Index _ _ _ _ _ _ _ _ _ flex _) =
     cleanMap flex matchFlex (\_ -> 0)
-searchForTerm (Rigid) (Index _ _ _ _ _ _ _ _ flex _) =
+searchForTerm Rigid (Index _ _ _ _ _ _ _ _ _ flex _) =
     cleanMap flex matchRigid (\_ -> 0)
-searchForTerm (Signature st) (Index _ _ _ _ _ _ _ _ _ sigs) =
-    case st of
-        Nothing -> Data.Map.empty
-        Just x -> trieSearch sigs (seperateSig x)
-searchForTerm (All st) index = search (OR
-                                        (OR
-                                            (Single (Module st))
-                                            (Single (Function st)))
-                                        (OR
-                                            (Single (Type st))
-                                            (Single (Class st))))
-                                        index
+searchForTerm (Signature st) (Index _ _ _ _ _ _ _ _ _ _ sigs) =
+    case st of Nothing -> Data.Map.empty
+               Just x  -> trieSearch sigs (seperateSig x)
+searchForTerm (All st) index =
+  search (OR (OR (Single (Module st))
+                 (Single (Function st)))
+             (OR (Single (Type st))
+                 (OR (Single (Class st))
+                     (Single (Description st)))))
+         index
 
 -- Gets a map, a function to filter out elements, and a function to change the values.
 -- First all values get filtered by the filter function, then the other function is applied on them
 cleanMap :: Ord a => Map a b -> (b -> Bool) -> (b -> c) -> Map a c
-cleanMap m fil fun =fromList
+cleanMap m fil fun = fromList
                             (map (\(x,y) -> (x, fun y))
                             (filter (\(_,y) -> fil y)
                             (toList m)))

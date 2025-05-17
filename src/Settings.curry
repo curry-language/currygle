@@ -16,6 +16,9 @@ maxSearchResults = 100
 indexItemFileName :: String
 indexItemFileName = "IndexItems.txt"
 
+descrTrieFileName :: String
+descrTrieFileName = "DescrTrie.txt"
+
 moduleTrieFileName :: String
 moduleTrieFileName = "ModuleTrie.txt"
 

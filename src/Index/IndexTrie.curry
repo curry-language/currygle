@@ -16,8 +16,8 @@ import Index.Helper
 import Index.IndexItem
 import Index.Signature
 
--- A Trie, a type of searchtree where you can search by a list of type [k], and it
--- returns all values of type v stored under the key in the tree.
+-- A Trie, a type of searchtree where you can search by a list of type [k],
+-- and it returns all values of type v stored under the key in the tree.
 data Trie k v = Node (Map k (Trie k v)) [v]
     deriving (Show, Read)
 
@@ -39,6 +39,10 @@ addListToTrie trie ((key, value):xs) = addListToTrie (addToTrie trie key value) 
 ------------------------------------------------
 -- Section for creation of the different IndexTrees
 ------------------------------------------------
+
+-- Creates a trie storing the name of the module for all IndexItems in the list
+createDescrTrie :: [IndexItem] -> Trie Char (Int,Int)
+createDescrTrie = addIndexMItemsToTree descriptionOfItem emptyTrie 0
 
 -- Creates a trie storing the name of the module for all IndexItems in the list
 createModuleTrie :: [IndexItem] -> Trie Char (Int,Int)
@@ -71,8 +75,8 @@ createSignatureTrie items = createSignatureTrieRec items 0
     createSignatureTrieRec :: [IndexItem] -> Int -> Trie Signature (Int, Int)
     createSignatureTrieRec []     n = emptyTrie
     createSignatureTrieRec (i:is) n = case getSignatures i of
-                                        Nothing -> createSignatureTrieRec is (n+1)
-                                        Just sigs -> addAllSignatures (createSignatureTrieRec is (n+1)) sigs n
+      Nothing -> createSignatureTrieRec is (n+1)
+      Just sigs -> addAllSignatures (createSignatureTrieRec is (n+1)) sigs n
 
     addAllSignatures :: Trie Signature (Int, Int) -> [[Signature]] -> Int -> Trie Signature (Int, Int)
     addAllSignatures t []     i = t
@@ -84,21 +88,41 @@ createSignatureTrie items = createSignatureTrieRec items 0
 -- and an int, which should be 0 by default.
 -- Adds the position of all IndexItems in the list to the Trie under all
 -- suffixes as keys
-addIndexItemsToTree :: Ord k => (IndexItem -> Maybe [k]) -> Trie k (Int,Int) -> [IndexItem] -> Int -> Trie k (Int,Int)
+addIndexItemsToTree :: Ord k => (IndexItem -> Maybe [k]) -> Trie k (Int,Int)
+                    -> [IndexItem] -> Int -> Trie k (Int,Int)
 addIndexItemsToTree _ trie []       _       = trie
-addIndexItemsToTree f trie (ii:iis) counter = if isNothing (f ii) then
-                                                addIndexItemsToTree f trie iis (counter+1)
-                                              else
-                                                let Just l = f ii in
-                                                  addIndexItemsToTree f (addItemToTrie trie l (counter, length l)) iis (counter+1)
+addIndexItemsToTree f trie (ii:iis) counter = case f ii of
+  Nothing -> addIndexItemsToTree f trie iis (counter+1)
+  Just l  -> addIndexItemsToTree f (addItemToTrie trie l (counter, length l))
+                                 iis (counter+1)
 
 -- Gets a Trie, a key and an item to add.
--- Adds the item into a Trie under all sublist of the key, inlcuding the empty one.
+-- Adds the item into a Trie under all sublist of the key,
+-- including the empty one.
 addItemToTrie :: Ord k => Trie k v -> [k] -> v -> Trie k v
-addItemToTrie trie str i = addListToTrie trie 
-              (combineKeysWithPos
-                (concat (map getAllPrefixes (getAllSuffixes str)) ++ [[]])
-                i)
+addItemToTrie trie str i =
+  addListToTrie trie 
+                (combineKeysWithPos
+                  (concat (map getAllPrefixes (getAllSuffixes str)) ++ [[]])
+                  i)
+
+-- For a function which extracts a list of keys from the `IndexItem`,
+-- a trie, which should be the empty Trie,
+-- a list of IndexItems,
+-- and an int, which should be 0 by default,
+-- add the position of all IndexItems in the list to the Trie under all
+-- suffixes as keys.
+addIndexMItemsToTree :: Ord k => (IndexItem -> [[k]]) -> Trie k (Int,Int)
+                     -> Int -> [IndexItem] -> Trie k (Int,Int)
+addIndexMItemsToTree _ trie _       []       = trie
+addIndexMItemsToTree f trie counter (ii:iis) = case f ii of
+  [] -> addIndexMItemsToTree f trie (counter+1) iis
+  ks -> addIndexMItemsToTree f (addItemsToTrie trie ks (counter, length ks))
+                               (counter+1) iis
+
+-- Adds a list of keys for a given item into a trie.
+addItemsToTrie :: Ord k => Trie k v -> [[k]] -> v -> Trie k v
+addItemsToTrie trie keys i = foldr (\k t -> addItemToTrie t k i) trie keys
 
 -- Gets a string, and returns a list containing all sufffixes of that String
 getAllSuffixes :: [a] -> [[a]]

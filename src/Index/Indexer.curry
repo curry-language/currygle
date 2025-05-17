@@ -24,17 +24,19 @@ import Settings
 
 -- An index consists of a lookup table of all items in the index, and Tries for quick search.
 -- 0. [IndexItem] is the List of all IndexItems in the index, which are referenced in the Tries
--- 1. Trie: module name for all index items, for :module and :inModule search
--- 2. Trie: package names, for inPackage search
--- 3. Trie: function names, for :function search
--- 4. Trie: type names, for :type search
--- 5. Trie: class names, for :class search
--- 6. Trie: author names, for :author search
--- 7. Map : mapping the functions to deterministic (True) or not (False)
--- 8. Map : mapping the functions to flexible (True) or rigid (False)
--- 9. Trie: Signatures, 
+-- 1. Trie: names occurring in descriptions of all index items
+-- 2. Trie: module name for all index items, for :module and :inModule search
+-- 3. Trie: package names, for inPackage search
+-- 4. Trie: function names, for :function search
+-- 5. Trie: type names, for :type search
+-- 6. Trie: class names, for :class search
+-- 7. Trie: author names, for :author search
+-- 8. Map : mapping the functions to deterministic (True) or not (False)
+-- 9. Map : mapping the functions to flexible (True) or rigid (False)
+-- 10. Trie: Signatures, 
 data Index = Index [IndexItem] 
-                   (Trie Char (Int,Int)) 
+                   (Trie Char (Int,Int))
+                   (Trie Char (Int,Int))
                    (Trie Char (Int,Int))
                    (Trie Char (Int,Int)) 
                    (Trie Char (Int,Int))
@@ -46,20 +48,22 @@ data Index = Index [IndexItem]
   deriving (Show, Read)
 
 createIndex :: [IndexItem] -> Index
-createIndex items = Index
-                      items
-                      (createModuleTrie items)
-                      (createPackageTrie items)
-                      (createFunctionTrie items)
-                      (createTypeTrie items)
-                      (createClassTrie items)
-                      (createAuthorTrie items)
-                      (createDetMap items)
-                      (createFlexMap items)
-                      (createSignatureTrie items)
+createIndex items =
+  Index items
+        (createDescrTrie items)
+        (createModuleTrie items)
+        (createPackageTrie items)
+        (createFunctionTrie items)
+        (createTypeTrie items)
+        (createClassTrie items)
+        (createAuthorTrie items)
+        (createDetMap items)
+        (createFlexMap items)
+        (createSignatureTrie items)
 
--- Creates a map, where a Int representing the position of a FunctionItem in the IndexItem list
--- points to a bool telling if the function is deterministic
+-- Creates a map, where a Int representing the position of a FunctionItem
+-- in the IndexItem list points to a Bool telling if the function
+-- is deterministic.
 createDetMap :: [IndexItem] -> Map Int Bool
 createDetMap items = createDetMapRec items 0
   where
@@ -115,62 +119,69 @@ createIndexFromDir cdocdir = do
 -- Strores a index in a directory. It first creates the directory "Index" if it does not exist yet,
 -- and then writes all parts of the index seperately into according files.
 writeIndex :: Index -> String -> IO ()
-writeIndex (Index items mods packs funcs types classes authors det flex sigs) path =
-  do  createDirectoryIfMissing True path
-      exists <- doesDirectoryExist (path)
-      if not exists then createDirectory (path) else pure ()
-      writeFile (path </> indexItemFileName) (showData items)
-      writeFile (path </> moduleTrieFileName) (showData mods)
-      writeFile (path </> packageTrieFileName) (showData packs)
-      writeFile (path </> functionTrieFileName) (showData funcs)
-      writeFile (path </> typeTrieFileName) (showData types)
-      writeFile (path </> classTrieFileName) (showData classes)
-      writeFile (path </> authorTrieFileName) (showData authors)
-      writeFile (path </> detMapFileName) (showData det)
-      writeFile (path </> flexMapFileName) (showData flex)
-      writeFile (path </> signatureTrieFileName) (showData sigs)
+writeIndex (Index items descrs mods packs funcs types classes
+                  authors det flex sigs) path = do
+  createDirectoryIfMissing True path
+  exists <- doesDirectoryExist (path)
+  if not exists then createDirectory (path) else pure ()
+  writeFile (path </> indexItemFileName) (showData items)
+  writeFile (path </> descrTrieFileName) (showData descrs)
+  writeFile (path </> moduleTrieFileName) (showData mods)
+  writeFile (path </> packageTrieFileName) (showData packs)
+  writeFile (path </> functionTrieFileName) (showData funcs)
+  writeFile (path </> typeTrieFileName) (showData types)
+  writeFile (path </> classTrieFileName) (showData classes)
+  writeFile (path </> authorTrieFileName) (showData authors)
+  writeFile (path </> detMapFileName) (showData det)
+  writeFile (path </> flexMapFileName) (showData flex)
+  writeFile (path </> signatureTrieFileName) (showData sigs)
 
 -- Gets the path to an index directory as a string, and returns the stored index
 readIndex :: String -> IO Index
-readIndex indexPath = 
-  do  itemsM <- readDataFile (indexPath </> indexItemFileName)
-      items <- case itemsM of
-                  Nothing -> return []
-                  Just a  -> return a
-      modsM <- readDataFile (indexPath </> moduleTrieFileName)
-      mods <- case modsM of
-                  Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-                  Just a  -> return a
-      packsM <- readDataFile (indexPath </> packageTrieFileName)
-      packs <- case packsM of
-                  Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-                  Just a  -> return a
-      funcsM <- readDataFile (indexPath </> functionTrieFileName)
-      funcs <- case funcsM of
-                  Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-                  Just a  -> return a
-      typesM <- readDataFile (indexPath </> typeTrieFileName)
-      types <- case typesM of
-                  Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-                  Just a  -> return a
-      classesM <- readDataFile (indexPath </> classTrieFileName)
-      classes <- case classesM of
-                  Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-                  Just a  -> return a
-      authorsM <- readDataFile (indexPath </> authorTrieFileName)
-      authors <- case authorsM of
-                  Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-                  Just a  -> return a
-      detM <- readDataFile (indexPath </> detMapFileName)
-      det <- case detM of
-                  Nothing -> return (Data.Map.empty :: Map Int Bool)
-                  Just a  -> return a
-      flexM <- readDataFile (indexPath </> flexMapFileName)
-      flex <- case flexM of
-                  Nothing -> return (Data.Map.empty :: Map Int FlexRigidResult)
-                  Just a  -> return a
-      sigsM <- readDataFile (indexPath </> signatureTrieFileName)
-      sigs <- case sigsM of
-                  Nothing -> return (emptyTrie :: Trie Signature (Int, Int))
-                  Just a  -> return a
-      return (Index items mods packs funcs types classes authors det flex sigs)
+readIndex indexPath = do
+  itemsM <- readDataFile (indexPath </> indexItemFileName)
+  items <- case itemsM of
+              Nothing -> return []
+              Just a  -> return a
+  descrsM <- readDataFile (indexPath </> descrTrieFileName)
+  descrs <- case descrsM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  modsM <- readDataFile (indexPath </> moduleTrieFileName)
+  mods <- case modsM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  packsM <- readDataFile (indexPath </> packageTrieFileName)
+  packs <- case packsM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  funcsM <- readDataFile (indexPath </> functionTrieFileName)
+  funcs <- case funcsM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  typesM <- readDataFile (indexPath </> typeTrieFileName)
+  types <- case typesM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  classesM <- readDataFile (indexPath </> classTrieFileName)
+  classes <- case classesM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  authorsM <- readDataFile (indexPath </> authorTrieFileName)
+  authors <- case authorsM of
+              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
+              Just a  -> return a
+  detM <- readDataFile (indexPath </> detMapFileName)
+  det <- case detM of
+              Nothing -> return (Data.Map.empty :: Map Int Bool)
+              Just a  -> return a
+  flexM <- readDataFile (indexPath </> flexMapFileName)
+  flex <- case flexM of
+              Nothing -> return (Data.Map.empty :: Map Int FlexRigidResult)
+              Just a  -> return a
+  sigsM <- readDataFile (indexPath </> signatureTrieFileName)
+  sigs <- case sigsM of
+              Nothing -> return (emptyTrie :: Trie Signature (Int, Int))
+              Just a  -> return a
+  return $ Index items descrs mods packs funcs types classes
+                  authors det flex sigs

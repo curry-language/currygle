@@ -3,6 +3,8 @@
 module Index.IndexItem
     where
 
+-- import System.IO.Unsafe ( unsafePerformIO )
+
 import Index.Signature
 
 import FlatCurry.Types
@@ -151,7 +153,28 @@ combineTypeExpr (x:xs) | length xs == 0 = x
 -- Get methods
 --------------
 
--- Gets an IndexItem, and reads out the name of the module
+-- For an IndexItem, returns the words in the description of the item.
+descriptionOfItem :: IndexItem -> [String]
+descriptionOfItem (ModuleItem (ModuleIndex _ _ _ _ d)) = wordsOfDescription d
+descriptionOfItem (FunctionItem (FunctionIndex _ _ _ _ _ _ _ d)) =
+  wordsOfDescription d
+descriptionOfItem (TypeItem (TypeIndex _ _ _ _ _ _ d)) = wordsOfDescription d
+
+-- Extracts the relevant words of a description. These are the words a
+-- leading and trailing non-letters are deleted and the remaining consists
+-- of letters only.
+wordsOfDescription :: String -> [String]
+wordsOfDescription = filter realWord . map stripNonLetters . words
+--wordsOfDescription s = filter realWord . map stripNonLetters . words
+--  let ss = filter realWord . map stripNonLetters . words $ s
+--  in unsafePerformIO (appendFile "WORDS" (unlines ss) >> return ss)
+ where
+  realWord s = all isAlpha s && length s > 3
+
+  stripNonLetters =
+    reverse . dropWhile (not . isAlpha) . reverse . dropWhile (not . isAlpha)
+
+-- For an IndexItem, returns the name of the module (if present).
 getModule :: IndexItem -> Maybe String
 getModule (ModuleItem (ModuleIndex modName _ _ _ _)) = Just  $ toLowerStr modName
 getModule (FunctionItem (FunctionIndex _ modName _ _ _ _ _ _)) = Just  $ toLowerStr modName
