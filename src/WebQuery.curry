@@ -158,8 +158,8 @@ currygleDescription =
       , (":rigid", "all rigid operations")
       ])
       `addClass` "table table-striped table-sm"
-  , par [ htxt "The keywords  AND, OR and NOT can be used as binary infix "
-        , htxt "operators to combine several options."
+  , par [ htxt "The keywords  AND and OR can be used as binary infix operators "
+        , htxt "and NOT as a prefix operator to logically combine options."
         , htxt "Options can be enclosed in curly braces to allow nested "
         , htxt "expressions." ]
   , par [ htxt "The option keywords can be abbreviated where the abbreviation "
@@ -174,7 +174,7 @@ currygleDescription =
   ]
 
 ------------------------------------------------------------------------------
--- The standard page of Currgle form in Curry pages:
+-- The standard HTML page of Currgle:
 curryglePage :: [BaseHtml] -> HtmlPage
 curryglePage contents =
   HtmlPage "Curr(y)gle"
