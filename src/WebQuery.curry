@@ -16,6 +16,7 @@ import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput )
 import Network.URL     ( string2urlencoded, urlencoded2string )
 import System.FilePath ( (</>) )
 import System.Process  ( system )
+import Text.Markdown   ( markdownText2HTML )
 
 import Index.IndexItem
 import Index.Indexer
@@ -106,31 +107,31 @@ searchResults items =
     h5 [htxt header, nbsp,
         style "badge badge-info" [htxt $ "score " ++ show score]]
 
+  -- format markdown text:
+  ppDesc = markdownText2HTML
+
   itemToHtml :: (IndexItem,Int) -> [[BaseHtml]]
   itemToHtml (ModuleItem (ModuleIndex name author pack link des),score) =
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [itemHeader ("module " ++ name) score,
+       ([itemHeader ("module " ++ name) score,
          htxt "author: ", bold [htxt author], breakline,
-         htxt "package: ", bold [htxt pack], breakline,
-         htxt des]
+         htxt "package: ", bold [htxt pack], breakline] ++ ppDesc des)
     ]]
   itemToHtml (FunctionItem (FunctionIndex name modName pack sig _ _ link des),score) =
     let sname = if null name || isAlpha (head name)
                   then name
                   else "(" ++ name ++ ")" in
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [itemHeader (sname ++ " :: " ++ prettySigs sig) score,
+       ([itemHeader (sname ++ " :: " ++ prettySigs sig) score,
          htxt "defined in module: ", bold [htxt modName], breakline,
-         htxt "of package: ", bold [htxt pack], breakline,
-         htxt des]
+         htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des)
     ]]
   itemToHtml (TypeItem (TypeIndex name modName pack isClass cs link des),score) =
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [itemHeader (if isClass then "class " ++ name else "data " ++ ppType)
+       ([itemHeader (if isClass then "class " ++ name else "data " ++ ppType)
                     score,
          htxt "defined in module: ", bold [htxt modName], breakline,
-         htxt "of package: ", bold [htxt pack], breakline,
-         htxt des]
+         htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des)
     ]]
    where
     -- pretty print the type from the TypeIndex

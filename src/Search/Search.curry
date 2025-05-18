@@ -27,6 +27,16 @@ import Settings
 currygleSearch :: Index -> SearchQuery -> [(IndexItem,Int)]
 currygleSearch index sq = toIndexItems index (search sq index)
 
+-- Converts a search result into a list of index items sorted by their
+-- match score, using the index as a translation.
+toIndexItems :: Index -> Map Int Int -> [(IndexItem, Int)]
+toIndexItems (Index items _ _ _ _ _ _ _ _ _ _) scores =
+  sortBy (\(_,x1) (_,x2) -> x1<x2)
+         (concatMap (\(ipos,score) -> case Data.Map.lookup ipos items of
+                                        Nothing   -> []
+                                        Just item -> [(item, score)])
+                    (toList scores))
+
 --- Search query in the given index and return the results together with
 --- the elapsed time of the search.
 profilingCurrygleSearch :: Index -> SearchQuery -> IO ([(IndexItem,Int)],Int)
@@ -48,18 +58,6 @@ search (OR sq1 sq2) index  =
 -- For NOT searchQuery, do a difference
 search (NOT sq1 sq2) index = difference (search sq1 index) (search sq2 index)
 
--- Converts a search result into a list of index items sorted by their
--- match score, using the index as a translation.
-toIndexItems :: Index -> Map Int Int -> [(IndexItem, Int)]
-toIndexItems (Index items _ _ _ _ _ _ _ _ _ _) scores =
-  sortBy (\(_,x1) (_,x2) -> x1<x2) (toIndexItemsRec items scores 0)
- where
-  toIndexItemsRec :: [IndexItem] -> Map Int Int -> Int -> [(IndexItem, Int)]
-  toIndexItemsRec []     _      _ = []
-  toIndexItemsRec (x:xs) resmap n = case Data.Map.lookup n resmap of
-    Nothing -> toIndexItemsRec xs resmap (n+1)
-    Just i  -> (x, i) : toIndexItemsRec xs resmap (n+1)
-
 -- Searches with a given single search term in the index and returns a map from
 -- index items (positions) and the score for this item.
 -- We adjust the score for description items so that items found in
@@ -69,7 +67,7 @@ searchForTerm (Description st) (Index _ descr _ _ _ _ _ _ _ _ _) =
   -- adjust score of description search:
   mapWithKey (\_ v -> (v+5)) (textSearch descr (toLowerS st))
 searchForTerm (Module st) (Index items _ modName _ _ _ _ _ _ _ _) =
-  filterForModule items (trieSearch modName (toLowerS st))
+  filterModuleResults items (trieSearch modName (toLowerS st))
 searchForTerm (InModule st) (Index _ _ modName _ _ _ _ _ _ _ _) =
   textSearch modName (toLowerS st)
 searchForTerm (InPackage st) (Index _ _ _ packName _ _ _ _ _ _ _) =
@@ -101,23 +99,25 @@ searchForTerm (All st) index =
                      (Single (Description st)))))
          index
 
--- Gets a map, a function to filter out elements, and a function to change the values.
--- First all values get filtered by the filter function, then the other function is applied on them
+-- Gets a map, a function to filter out elements, and a function to change
+-- the values. First all values get filtered by the filter function,
+-- then the other function is applied on them
 cleanMap :: Ord a => Map a b -> (b -> Bool) -> (b -> c) -> Map a c
-cleanMap m fil fun = fromList
-                            (map (\(x,y) -> (x, fun y))
-                            (filter (\(_,y) -> fil y)
-                            (toList m)))
+cleanMap m fil fun =
+  fromList (map (\(x,y) -> (x, fun y))
+                (filter (\(_,y) -> fil y)
+                        (toList m)))
 
--- Gets the complete list of IndexItems, and deletes all which are not modules in the map.
-filterForModule :: [IndexItem] -> Map Int Int -> Map Int Int
-filterForModule items toBeFiltered = filterForModuleAcc items toBeFiltered 0
-where
-    filterForModuleAcc :: [IndexItem] -> Map Int Int -> Int -> Map Int Int
-    filterForModuleAcc [] left _ = left
-    filterForModuleAcc ((ModuleItem _):is) left x = filterForModuleAcc is left (x+1)
-    filterForModuleAcc ((FunctionItem _):is) left x = filterForModuleAcc is (Data.Map.delete x left) (x+1)
-    filterForModuleAcc ((TypeItem _):is) left x = filterForModuleAcc is (Data.Map.delete x left) (x+1)
+-- Remove in a result map all results which do not refer to module items
+-- in the given index.
+filterModuleResults :: Map Int IndexItem -> Map Int Int -> Map Int Int
+filterModuleResults items results =
+  filterWithKey (\pos _ -> isModuleItem (Data.Map.lookup pos items)) results
+ where
+  isModuleItem Nothing                 = False -- should not occur
+  isModuleItem (Just (ModuleItem _))   = True
+  isModuleItem (Just (FunctionItem _)) = False
+  isModuleItem (Just (TypeItem _))     = False
 
 -- Searches for a String in a Trie, and returns a map with the result Map.
 -- The key of the map is the position of the found element in the IndexItem list

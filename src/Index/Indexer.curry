@@ -41,7 +41,7 @@ import Settings
 -- 8. Map : mapping the functions to deterministic (True) or not (False)
 -- 9. Map : mapping the functions to flexible (True) or rigid (False)
 -- 10. Trie: Signatures, 
-data Index = Index [IndexItem] 
+data Index = Index (Map Int IndexItem)
                    (Trie Char (Int,Int))
                    (Trie Char (Int,Int))
                    (Trie Char (Int,Int))
@@ -57,7 +57,7 @@ data Index = Index [IndexItem]
 --- Creates the Currygle search index for the given items.
 createIndex :: [IndexItem] -> Index
 createIndex items =
-  Index items
+  Index (fromList nitems)
         (addIndexItemsToTrie descriptionOfItem nitems)
         (addIndexItemsToTrie getModule         nitems)
         (addIndexItemsToTrie getPackage        nitems)
@@ -118,25 +118,25 @@ writeIndex (Index items descrs mods packs funcs types classes
   createDirectoryIfMissing True path
   exists <- doesDirectoryExist (path)
   if not exists then createDirectory (path) else pure ()
-  writeFile (path </> indexItemFileName) (showData items)
-  writeFile (path </> descrTrieFileName) (showData descrs)
-  writeFile (path </> moduleTrieFileName) (showData mods)
-  writeFile (path </> packageTrieFileName) (showData packs)
-  writeFile (path </> functionTrieFileName) (showData funcs)
-  writeFile (path </> typeTrieFileName) (showData types)
-  writeFile (path </> classTrieFileName) (showData classes)
-  writeFile (path </> authorTrieFileName) (showData authors)
-  writeFile (path </> detMapFileName) (showData det)
-  writeFile (path </> flexMapFileName) (showData flex)
+  writeFile (path </> indexItemFileName)     (showData items)
+  writeFile (path </> descrTrieFileName)     (showData descrs)
+  writeFile (path </> moduleTrieFileName)    (showData mods)
+  writeFile (path </> packageTrieFileName)   (showData packs)
+  writeFile (path </> functionTrieFileName)  (showData funcs)
+  writeFile (path </> typeTrieFileName)      (showData types)
+  writeFile (path </> classTrieFileName)     (showData classes)
+  writeFile (path </> authorTrieFileName)    (showData authors)
+  writeFile (path </> detMapFileName)        (showData det)
+  writeFile (path </> flexMapFileName)       (showData flex)
   writeFile (path </> signatureTrieFileName) (showData sigs)
-  putStrLn $ "Index with " ++ show (length items) ++ " items written."
+  putStrLn $ "Index with " ++ show (size items) ++ " items written."
 
 -- Gets the path to an index directory as a string, and returns the stored index
 readIndex :: String -> IO Index
 readIndex indexPath = do
   itemsM <- readDataFile (indexPath </> indexItemFileName)
   items <- case itemsM of
-              Nothing -> return []
+              Nothing -> return (Data.Map.empty :: Map Int IndexItem)
               Just a  -> return a
   descrsM <- readDataFile (indexPath </> descrTrieFileName)
   descrs <- case descrsM of
