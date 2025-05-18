@@ -42,64 +42,32 @@ addToTrie (Node m vs) (k:ks) v
 -- Creation of the different IndexTrees
 ------------------------------------------------
 
--- Creates a trie storing the name of the module for all IndexItems in the list
-createDescrTrie :: [IndexItem] -> Trie Char (Int,Int)
-createDescrTrie = addIndexItemsToTrie descriptionOfItem
-
--- Creates a trie storing the name of the module for all IndexItems in the list
-createModuleTrie :: [IndexItem] -> Trie Char (Int,Int)
-createModuleTrie = addIndexItemsToTrie getModule
-
--- Creates a trie storing the name of the package for all IndexItems in the list
-createPackageTrie :: [IndexItem] -> Trie Char (Int,Int)
-createPackageTrie = addIndexItemsToTrie getPackage
-
--- Creates a trie containing the names of functions and constructors.
-createFunctionTrie :: [IndexItem] -> Trie Char (Int,Int)
-createFunctionTrie = addIndexItemsToTrie getFunctionNames
-
--- Creates a trie storing the name of the type for all TypeIndex in the list
--- which are not classes
-createTypeTrie :: [IndexItem] -> Trie Char (Int,Int)
-createTypeTrie = addIndexItemsToTrie getTypeName
-
--- Creates a trie storing the name of the class for all TypeIndex in the list
--- which are classes
-createClassTrie :: [IndexItem] -> Trie Char (Int,Int)
-createClassTrie = addIndexItemsToTrie getClassName
-
--- Creates a trie storing the name of the author for all IndexItems in the list
-createAuthorTrie :: [IndexItem] -> Trie Char (Int,Int)
-createAuthorTrie = addIndexItemsToTrie getAuthor
-
 -- Creates a trie storing the signature for all TypeIndex and FunctionIndex
 -- in the list
-createSignatureTrie :: [IndexItem] -> Trie Signature (Int,Int)
-createSignatureTrie items = createSignatureTrieRec items 0
+createSignatureTrie :: [(Int,IndexItem)] -> Trie Signature (Int,Int)
+createSignatureTrie items = createSignatureTrieRec items
  where
-  createSignatureTrieRec :: [IndexItem] -> Int -> Trie Signature (Int, Int)
-  createSignatureTrieRec []     n = emptyTrie
-  createSignatureTrieRec (i:is) n = case getSignatures i of
-    Nothing -> createSignatureTrieRec is (n+1)
-    Just sigs -> addAllSignatures (createSignatureTrieRec is (n+1)) sigs n
+  createSignatureTrieRec :: [(Int,IndexItem)] -> Trie Signature (Int, Int)
+  createSignatureTrieRec []         = emptyTrie
+  createSignatureTrieRec ((n,i):is) = case getSignatures i of
+    Nothing   -> createSignatureTrieRec is
+    Just sigs -> addAllSignatures (createSignatureTrieRec is) sigs n
 
-  addAllSignatures :: Trie Signature (Int, Int) -> [[Signature]] -> Int -> Trie Signature (Int, Int)
   addAllSignatures t []     i = t
-  addAllSignatures t (s:ss) i = addAllSignatures (addItemToTrie t s (i, length s)) ss i
+  addAllSignatures t (s:ss) i = addAllSignatures
+                                  (addItemToTrie t s (i, length s)) ss i
 
---- Construct a trie from a list of `IndexItem`s w.r.t. a function
+--- Construct a trie from a list of numbered `IndexItem`s w.r.t. a function
 --- to extract a list of keys from each `IndexItem`.
 --- Adds the position of all IndexItems in the list to the trie under all
---- suffixes as keys
-addIndexItemsToTrie :: Ord k => (IndexItem -> [[k]]) -> [IndexItem]
-                        -> Trie k (Int,Int)
-addIndexItemsToTrie f = addIndexItems emptyTrie 0
+--- suffixes as keys.
+addIndexItemsToTrie :: Ord k => (IndexItem -> [[k]]) -> [(Int,IndexItem)]
+                     -> Trie k (Int,Int)
+addIndexItemsToTrie f = addIndexItems emptyTrie
  where
-  addIndexItems trie _        []       = trie
-  addIndexItems trie indexpos (ii:iis) = case f ii of
-    --[]   -> addIndexItems trie (indexpos + 1) iis
-    keys -> addIndexItems (addItemsToTrie trie indexpos keys)
-                          (indexpos + 1) iis
+  addIndexItems trie []       = trie
+  addIndexItems trie ((ni,item):nitems) =
+    addIndexItems (addItemsToTrie trie ni (f item)) nitems
 
   -- Adds a list of keys for a given item position into a trie.
   addItemsToTrie trie ipos keys =

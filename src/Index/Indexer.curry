@@ -58,39 +58,40 @@ data Index = Index [IndexItem]
 createIndex :: [IndexItem] -> Index
 createIndex items =
   Index items
-        (createDescrTrie items)
-        (createModuleTrie items)
-        (createPackageTrie items)
-        (createFunctionTrie items)
-        (createTypeTrie items)
-        (createClassTrie items)
-        (createAuthorTrie items)
-        (createDetMap items)
-        (createFlexMap items)
-        (createSignatureTrie items)
+        (addIndexItemsToTrie descriptionOfItem nitems)
+        (addIndexItemsToTrie getModule         nitems)
+        (addIndexItemsToTrie getPackage        nitems)
+        (addIndexItemsToTrie getFunctionNames  nitems)
+        (addIndexItemsToTrie getTypeName       nitems)
+        (addIndexItemsToTrie getClassName      nitems)
+        (addIndexItemsToTrie getAuthor         nitems)
+        (createDetMap nitems)
+        (createFlexMap nitems)
+        (createSignatureTrie nitems)
+ where nitems = zip [0..] items
 
 -- Creates a map, where a Int representing the position of a FunctionItem
--- in the IndexItem list points to a Bool telling if the function
+-- in the IndexItem list points to a Bool which is `True` if the function
 -- is deterministic.
-createDetMap :: [IndexItem] -> Map Int Bool
-createDetMap items = createDetMapRec items 0
-  where
-    createDetMapRec :: [IndexItem] -> Int -> Map Int Bool
-    createDetMapRec []                                                   _ = Data.Map.empty
-    createDetMapRec ((ModuleItem _):iis)                                 x = createDetMapRec iis (x+1)
-    createDetMapRec ((TypeItem _):iis)                                   x = createDetMapRec iis (x+1)
-    createDetMapRec ((FunctionItem (FunctionIndex _ _ _ _ det _ _ _)):iis) x = insert x det (createDetMapRec iis (x+1))
+createDetMap :: [(Int,IndexItem)] -> Map Int Bool
+createDetMap items = cDetMap items
+ where
+  cDetMap []                     = Data.Map.empty
+  cDetMap ((_,ModuleItem _):iis) = cDetMap iis
+  cDetMap ((_,TypeItem _):iis)   = cDetMap iis
+  cDetMap ((x,FunctionItem (FunctionIndex _ _ _ _ det _ _ _)):iis) =
+    insert x det (cDetMap iis)
 
 -- Creates a map, where a Int representing the position of a FunctionItem in the IndexItem list
 -- points to a FlexRigidResult telling if the function is flexible or not
-createFlexMap :: [IndexItem] -> Map Int FlexRigidResult
-createFlexMap items = createFlexMapRec items 0
-  where
-    createFlexMapRec :: [IndexItem] -> Int -> Map Int FlexRigidResult
-    createFlexMapRec []                                                    _ = Data.Map.empty
-    createFlexMapRec ((ModuleItem _):iis)                                  x = createFlexMapRec iis (x+1)
-    createFlexMapRec ((TypeItem _):iis)                                    x = createFlexMapRec iis (x+1)
-    createFlexMapRec ((FunctionItem (FunctionIndex _ _ _ _ _ flex _ _)):iis) x = insert x flex (createFlexMapRec iis (x+1))
+createFlexMap :: [(Int,IndexItem)] -> Map Int FlexRigidResult
+createFlexMap items = cFlexMap items
+ where
+  cFlexMap []                     = Data.Map.empty
+  cFlexMap ((_,ModuleItem _):iis) = cFlexMap iis
+  cFlexMap ((_,TypeItem _):iis)   = cFlexMap iis
+  cFlexMap ((x,FunctionItem (FunctionIndex _ _ _ _ _ flex _ _)):iis) =
+    insert x flex (cFlexMap iis)
 
 -- Creates an index from `.cdoc` files (as produced by CurryDoc) stored in
 -- the directory provided as the argument.
@@ -128,6 +129,7 @@ writeIndex (Index items descrs mods packs funcs types classes
   writeFile (path </> detMapFileName) (showData det)
   writeFile (path </> flexMapFileName) (showData flex)
   writeFile (path </> signatureTrieFileName) (showData sigs)
+  putStrLn $ "Index with " ++ show (length items) ++ " items written."
 
 -- Gets the path to an index directory as a string, and returns the stored index
 readIndex :: String -> IO Index

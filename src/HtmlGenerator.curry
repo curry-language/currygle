@@ -52,7 +52,7 @@ getResultPage withserver searchtxt
   resultFromIndex query = do
     index <- readIndex indexDirPath
     getSearchPage (searchtxt ++ " (search server not reachable)")
-                  (currygleSearch index query)
+                  (map fst (currygleSearch index query))
 
 getSearchPage :: String -> [IndexItem] -> IO HtmlPage
 getSearchPage search items = do
