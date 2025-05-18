@@ -1,12 +1,14 @@
 ----------------------------------------------------------------------
---- A module to write the index for Currygle2.
+--- This module contains the definition of the index for Currygle
+--- and operations to read and write the index in a compact form.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
 ----------------------------------------------------------------------
 
 module Index.Indexer
-  where
+  ( Index(..), createIndexFromDir, writeIndex, readIndex )
+ where
 
 import Data.Map
 import FlatCurry.FlexRigid
@@ -22,8 +24,13 @@ import Index.IndexItem
 import Index.Signature
 import Settings
 
--- An index consists of a lookup table of all items in the index, and Tries for quick search.
--- 0. [IndexItem] is the List of all IndexItems in the index, which are referenced in the Tries
+-- The Currygle index consists of a lookup table of all items in the index
+-- and Tries for quick search. various entities.
+-- The values of the tries contain the index position of the corresponding
+-- item and the matching score.
+--
+-- 0. [IndexItem] is the list of all IndexItems in the index, where the tries
+--    refer to by the index position
 -- 1. Trie: names occurring in descriptions of all index items
 -- 2. Trie: module name for all index items, for :module and :inModule search
 -- 3. Trie: package names, for inPackage search
@@ -85,9 +92,8 @@ createFlexMap items = createFlexMapRec items 0
     createFlexMapRec ((TypeItem _):iis)                                    x = createFlexMapRec iis (x+1)
     createFlexMapRec ((FunctionItem (FunctionIndex _ _ _ _ _ flex _ _)):iis) x = insert x flex (createFlexMapRec iis (x+1))
 
--- Gets a String, which is the path to the directory containing the cdoc files, and only cdoc file.
--- Gets a second String, which is the path where the finished Index will be stored.
--- Creates a simple index by writing a list of all CDocs into an txt file.
+-- Creates an index from `.cdoc` files (as produced by CurryDoc) stored in
+-- the directory provided as the argument.
 createIndexFromDir :: String -> IO Index
 createIndexFromDir cdocdir = do
   cipkgs <- getAllCurryInfo cdocdir
@@ -172,3 +178,5 @@ readIndex indexPath = do
               Just a  -> return a
   return $ Index items descrs mods packs funcs types classes
                   authors det flex sigs
+
+------------------------------------------------------------------------------
