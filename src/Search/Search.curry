@@ -55,19 +55,19 @@ toIndexItems (Index items _ _ _ _ _ _ _ _ _ _) scores
 
 searchForTerm :: SearchTerm -> Index -> Map Int Int
 searchForTerm (Description st) (Index _ descr _ _ _ _ _ _ _ _ _) =
-    textSearch descr (toLowerStr st)
+    textSearch descr (toLowerS st)
 searchForTerm (Module st) (Index items _ modName _ _ _ _ _ _ _ _) =
-    filterForModule items (trieSearch modName (toLowerStr st))
+    filterForModule items (trieSearch modName (toLowerS st))
 searchForTerm (InModule st) (Index _ _ modName _ _ _ _ _ _ _ _) =
-    textSearch modName (toLowerStr st)
+    textSearch modName (toLowerS st)
 searchForTerm (InPackage st) (Index _ _ _ packName _ _ _ _ _ _ _) =
-    textSearch packName (toLowerStr st)
+    textSearch packName (toLowerS st)
 searchForTerm (Function st) (Index _ _ _ _ fun _ _ _ _ _ _) =
-    textSearch fun (toLowerStr st)
+    textSearch fun (toLowerS st)
 searchForTerm (Type st) (Index _ _ _ _ _ t _ _ _ _ _) =
-    textSearch t (toLowerStr st)
+    textSearch t (toLowerS st)
 searchForTerm (Class st) (Index _ _ _ _ _ _ c _ _ _ _) =
-    textSearch c (toLowerStr st)
+    textSearch c (toLowerS st)
 searchForTerm (Author st) (Index _ _ _ _ _ _ _ author _ _ _) =
     textSearch author st
 searchForTerm Det (Index _ _ _ _ _ _ _ _ det _ _) =

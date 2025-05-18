@@ -3,7 +3,7 @@
 module Index.IndexItem
     where
 
--- import System.IO.Unsafe ( unsafePerformIO )
+--import System.IO.Unsafe ( unsafePerformIO )
 
 import Index.Signature
 
@@ -59,44 +59,43 @@ data TypeIndex = TypeIndex String String String Bool [[Signature]] String String
 -- Gets a CurryInfo, and turns it into IndexItems, which are used for the search functionality of currygle2
 toIndexItem :: (CurryInfo, String) -> [IndexItem]
 toIndexItem (CurryInfo modInfo funcInfos typeInfos, packName) = 
-                                                    (moduleInfoToIndexItem modInfo packName
-                                                    :(map (\x -> functionInfoToIndexItem x packName) funcInfos))
-                                                    ++ (map (\x -> typeInfoToIndexItem x packName) typeInfos)
+  (moduleInfoToIndexItem modInfo packName
+  :(map (\x -> functionInfoToIndexItem x packName) funcInfos))
+  ++ (map (\x -> typeInfoToIndexItem x packName) typeInfos)
 
 -- Turns a ModuleInfo into a ModuleIndex, used as an index for the search. It needs the package name as extra input.
 moduleInfoToIndexItem :: ModuleInfo -> String -> IndexItem
 moduleInfoToIndexItem (ModuleInfo name author des) packageName = 
-    ModuleItem (
-      ModuleIndex
-        (name)
-        (author)
-        (packageName)
-        (moduleDocumentationUrl packageName name)
-        des)
+  ModuleItem (
+    ModuleIndex name author packageName
+      (moduleDocumentationUrl packageName name)
+      des)
 
--- Turns a FunctionInfo into a FunctionIndex, used as an index for the search. It needs the package name as extra input.
+-- Turns a FunctionInfo into a FunctionIndex, used as an index for the search.
+-- It needs the package name as extra input.
 functionInfoToIndexItem :: FunctionInfo -> String -> IndexItem
 functionInfoToIndexItem
   (FunctionInfo name signature modName des nonDet flexRigid) packageName =
     FunctionItem (
       FunctionIndex
-        (name)
-        (modName)
-        (packageName)
+        name
+        modName
+        packageName
         (seperateSig (typeExprToSignature signature))
         (not nonDet)
         flexRigid
         (entityDocumentationUrl packageName modName name)
         des)
 
--- Turns a TypeInfo into a TypeIndex, used as an index for the search. It needs the package name as extra input.
+-- Turns a TypeInfo into a TypeIndex, used as an index for the search.
+-- It needs the package name as extra input.
 typeInfoToIndexItem :: TypeInfo -> String -> IndexItem
 typeInfoToIndexItem (TypeInfo name constructors vars modName des _) package =
     TypeItem (
       TypeIndex
         ((getName name))
-        (modName)
-        (package)
+        modName
+        package
         (isClass name)
         (constrToSigs constructors (getName name) vars)
         (entityDocumentationUrl package modName name)
@@ -126,12 +125,14 @@ findPackageName modName =  do
 -- Takes a list of Constructors, the name of the type, and the variables it has,
 -- and creates a list of lists of signatures, where each list of signature represents a constructor
 constrToSigs :: [(QName, [TypeExpr])] -> String -> [Int] -> [[Signature]]
-constrToSigs constr name vars  = map (\c -> c ++ [(getType name vars)]) (map constrToSig constr)
-  where
-    constrToSig :: (QName, [TypeExpr]) -> [Signature]
-    constrToSig (_, exprs) = map typeExprToSignature exprs
-    getType :: String -> [Int] -> Signature
-    getType name1 vars1 = Index.Signature.Type name1 (map Index.Signature.Var vars1)
+constrToSigs constr name vars  =
+  map (\c -> c ++ [(getType name vars)]) (map constrToSig constr)
+ where
+  constrToSig :: (QName, [TypeExpr]) -> [Signature]
+  constrToSig (_, exprs) = map typeExprToSignature exprs
+
+  getType :: String -> [Int] -> Signature
+  getType name1 vars1 = Index.Signature.Type name1 (map Index.Signature.Var vars1)
 
 
 -- Gets a type exprerssion, and turns it into a list of type expressions,
@@ -164,48 +165,57 @@ descriptionOfItem (TypeItem (TypeIndex _ _ _ _ _ _ d)) = wordsOfDescription d
 -- leading and trailing non-letters are deleted and the remaining consists
 -- of letters only.
 wordsOfDescription :: String -> [String]
-wordsOfDescription = filter realWord . map stripNonLetters . words
---wordsOfDescription s = filter realWord . map stripNonLetters . words
---  let ss = filter realWord . map stripNonLetters . words $ s
---  in unsafePerformIO (appendFile "WORDS" (unlines ss) >> return ss)
+wordsOfDescription =
+  filter realWord . map toLowerS . map stripNonLetters . words
+--wordsOfDescription s =
+  --let ss = filter realWord . map toLowerS . map stripNonLetters . words $ s
+  --in unsafePerformIO (appendFile "WORDS" (unlines ss) >> return ss)
  where
-  realWord s = all isAlpha s && length s > 3
+  realWord w = all isAlpha w && length w > 2 && w `notElem` excludedWords
 
   stripNonLetters =
     reverse . dropWhile (not . isAlpha) . reverse . dropWhile (not . isAlpha)
 
+-- List of words (with more than two characters) excluded from description
+-- index (might be extended or go into a file).
+excludedWords :: [String]
+excludedWords =
+  [ "all", "and", "any", "are","can","does", "for", "has", "have"
+  , "its", "made", "make", "must", "not", "only", "that", "the", "them"
+  , "then", "they", "than", "this", "use", "used", "will", "with" ]
+
 -- For an IndexItem, returns the name of the module (if present).
 getModule :: IndexItem -> Maybe String
-getModule (ModuleItem (ModuleIndex modName _ _ _ _)) = Just  $ toLowerStr modName
-getModule (FunctionItem (FunctionIndex _ modName _ _ _ _ _ _)) = Just  $ toLowerStr modName
-getModule (TypeItem (TypeIndex _ modName _ _ _ _ _)) = Just  $ toLowerStr modName
+getModule (ModuleItem (ModuleIndex modName _ _ _ _)) = Just  $ toLowerS modName
+getModule (FunctionItem (FunctionIndex _ modName _ _ _ _ _ _)) = Just  $ toLowerS modName
+getModule (TypeItem (TypeIndex _ modName _ _ _ _ _)) = Just  $ toLowerS modName
 
 -- Gets an IndexItem, and reads out the name of the package
 getPackage :: IndexItem -> Maybe String
-getPackage (ModuleItem (ModuleIndex _ _ pakName _ _)) = Just  $ toLowerStr pakName
-getPackage (FunctionItem (FunctionIndex _ _ pakName _ _ _ _ _)) = Just  $ toLowerStr pakName
-getPackage (TypeItem (TypeIndex _ _ pakName _ _ _ _)) = Just  $ toLowerStr pakName
+getPackage (ModuleItem (ModuleIndex _ _ pakName _ _)) = Just  $ toLowerS pakName
+getPackage (FunctionItem (FunctionIndex _ _ pakName _ _ _ _ _)) = Just  $ toLowerS pakName
+getPackage (TypeItem (TypeIndex _ _ pakName _ _ _ _)) = Just  $ toLowerS pakName
 
 getFunctionName :: IndexItem -> Maybe String
 getFunctionName (ModuleItem (ModuleIndex _ _ _ _ _)) = Nothing
-getFunctionName (FunctionItem (FunctionIndex funcName _ _ _ _ _ _ _)) = Just  $ toLowerStr funcName
+getFunctionName (FunctionItem (FunctionIndex funcName _ _ _ _ _ _ _)) = Just  $ toLowerS funcName
 getFunctionName (TypeItem (TypeIndex _ _ _ _ _ _ _)) = Nothing
 
 getTypeName :: IndexItem -> Maybe String
 getTypeName (ModuleItem (ModuleIndex _ _ _ _ _)) = Nothing
 getTypeName (FunctionItem (FunctionIndex _ _ _ _ _ _ _ _)) = Nothing
-getTypeName (TypeItem (TypeIndex typeName _ _ False _ _ _)) = Just  $ toLowerStr typeName
+getTypeName (TypeItem (TypeIndex typeName _ _ False _ _ _)) = Just  $ toLowerS typeName
 getTypeName (TypeItem (TypeIndex _ _ _ True _ _ _)) = Nothing
 
 getClassName :: IndexItem -> Maybe String
 getClassName (ModuleItem (ModuleIndex _ _ _ _ _)) = Nothing
 getClassName (FunctionItem (FunctionIndex _ _ _ _ _ _ _ _)) = Nothing
 getClassName (TypeItem (TypeIndex _ _ _ False _ _ _)) = Nothing
-getClassName (TypeItem (TypeIndex className _ _ True _ _ _)) = Just $ toLowerStr className
+getClassName (TypeItem (TypeIndex className _ _ True _ _ _)) = Just $ toLowerS className
 
 -- Gets an IndexItem, and reads out the name of the author
 getAuthor :: IndexItem -> Maybe String
-getAuthor (ModuleItem (ModuleIndex _ author _ _ _)) = Just $ toLowerStr author
+getAuthor (ModuleItem (ModuleIndex _ author _ _ _)) = Just $ toLowerS author
 getAuthor (FunctionItem (FunctionIndex _ _ _ _ _ _ _ _)) = Nothing
 getAuthor (TypeItem (TypeIndex _ _ _ _ _ _ _)) = Nothing
 
@@ -214,8 +224,8 @@ getSignatures (ModuleItem (ModuleIndex _ _ _ _ _)) = Nothing
 getSignatures (FunctionItem (FunctionIndex _ _ _ sig _ _ _ _)) = Just [sig]
 getSignatures (TypeItem (TypeIndex _ _ _ _ constr _ _)) = Just constr
 
-toLowerStr :: String -> String
-toLowerStr s = map toLower s
+toLowerS :: String -> String
+toLowerS s = map toLower s
 
 ----------------------------------
 -- Auto generated stuff fo rw-data

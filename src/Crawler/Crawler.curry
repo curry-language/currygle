@@ -63,59 +63,58 @@ getAllCurryInfo path = do
     cdoc <- openFile fn ReadMode >>= hGetContents
     return (readCurryInfo cdoc, pn)
 
--- Reads a CurryInfo from a String. Can handle the two formats, which are used for the CurryInfo
+-- Reads a CurryInfo from a String. Can handle the two formats,
+-- which are used in existing .cdoc files.
 readCurryInfo :: String -> Maybe CurryInfo
-readCurryInfo text = if (null (readToCurryInfo text)) then
-                        let infos = readToAltCurryInfo text in
-                            if null infos then
-                                Nothing
-                            else
-                                Just (toCurryInfo (fst (infos !! 0 )))
-                    else
-                        Just (fst (readToCurryInfo text !! 0))
-    where
-        -- Interpretes a String as a CurryInfo
-        readToCurryInfo :: String -> [(CurryInfo, String)]
-        readToCurryInfo curryInfo = reads curryInfo
+readCurryInfo text
+  | null (readToCurryInfo text)
+  = let infos = readToAltCurryInfo text in
+    if null infos then Nothing
+                  else Just (toCurryInfo (fst (infos !! 0 )))
+  | otherwise
+  = Just (fst (readToCurryInfo text !! 0))
+ where
+  -- Interpretes a String as a CurryInfo
+  readToCurryInfo :: String -> [(CurryInfo, String)]
+  readToCurryInfo curryInfo = reads curryInfo
 
-        -- Interpretes a String as a AltCurryInfo
-        readToAltCurryInfo :: String -> [(AltCurryInfo, String)]
-        readToAltCurryInfo curryInfo = reads curryInfo
+  -- Interpretes a String as a AltCurryInfo
+  readToAltCurryInfo :: String -> [(AltCurryInfo, String)]
+  readToAltCurryInfo curryInfo = reads curryInfo
 
-        -- Creates a CurryInfo from an AltCurryInfo by deleting all ForallType TypeExpr
-        toCurryInfo :: AltCurryInfo -> CurryInfo
-        toCurryInfo (Crawler.ReadersAlternatives.CurryInfo altModInfo altFuncInfos altTypeInfos) =
-                                                    Crawler.Readers.CurryInfo
-                                                        (toModInfo altModInfo)
-                                                        (toFuncInfos altFuncInfos)
-                                                        (toTypeInfos altTypeInfos)
-        
-        toModInfo :: AltModuleInfo -> ModuleInfo
-        toModInfo (Crawler.ReadersAlternatives.ModuleInfo s1 s2 s3) = Crawler.Readers.ModuleInfo s1 s2 s3
+  -- Creates a CurryInfo from an AltCurryInfo by deleting all ForallType TypeExpr
+  toCurryInfo :: AltCurryInfo -> CurryInfo
+  toCurryInfo (Crawler.ReadersAlternatives.CurryInfo
+                 altModInfo altFuncInfos altTypeInfos) =
+    Crawler.Readers.CurryInfo
+        (toModInfo altModInfo)
+        (toFuncInfos altFuncInfos)
+        (map toTypeInfo altTypeInfos)
+  
+  toModInfo :: AltModuleInfo -> ModuleInfo
+  toModInfo (Crawler.ReadersAlternatives.ModuleInfo s1 s2 s3) = Crawler.Readers.ModuleInfo s1 s2 s3
 
-        toFuncInfos :: [AltFunctionInfo] -> [FunctionInfo]
-        toFuncInfos altFuncInfos = map toFuncInfo altFuncInfos
+  toFuncInfos :: [AltFunctionInfo] -> [FunctionInfo]
+  toFuncInfos altFuncInfos = map toFuncInfo altFuncInfos
 
-        toFuncInfo :: AltFunctionInfo -> FunctionInfo
-        toFuncInfo (Crawler.ReadersAlternatives.FunctionInfo a te b c d e)
-            = Crawler.Readers.FunctionInfo a (adjustTypeExpr te) b c d e
-        
-        toTypeInfos :: [AltTypeInfo] -> [TypeInfo]
-        toTypeInfos altTypeInfos = map toTypeInfo altTypeInfos
+  toFuncInfo :: AltFunctionInfo -> FunctionInfo
+  toFuncInfo (Crawler.ReadersAlternatives.FunctionInfo a te b c d e)
+      = Crawler.Readers.FunctionInfo a (adjustTypeExpr te) b c d e
+  
+  toTypeInfo :: AltTypeInfo -> TypeInfo
+  toTypeInfo (Crawler.ReadersAlternatives.TypeInfo a constr b c d e) =
+    Crawler.Readers.TypeInfo a (toConstructors constr) b c d e
 
-        toTypeInfo :: AltTypeInfo -> TypeInfo
-        toTypeInfo (Crawler.ReadersAlternatives.TypeInfo a constr b c d e) = Crawler.Readers.TypeInfo a (toConstructors constr) b c d e
+  -- Transforms the constructors, by changing the TypeExpr to the normal format
+  toConstructors :: [(Crawler.ReadersAlternatives.QName, [Crawler.ReadersAlternatives.TypeExpr])] -> [(FlatCurry.Types.QName, [FlatCurry.Types.TypeExpr])]
+  toConstructors constrs = map (\(x, t) -> (x, map adjustTypeExpr t)) constrs
 
-        -- Transforms the constructors, by changing the TypeExpr to the normal format
-        toConstructors :: [(Crawler.ReadersAlternatives.QName, [Crawler.ReadersAlternatives.TypeExpr])] -> [(FlatCurry.Types.QName, [FlatCurry.Types.TypeExpr])]
-        toConstructors constrs = map (\(x, t) -> (x, map adjustTypeExpr t)) constrs
+  -- Changes an alternative TypeExpr into a normal TypeExpr, by changing the ForallTypes structure
+  adjustTypeExpr :: Crawler.ReadersAlternatives.TypeExpr -> FlatCurry.Types.TypeExpr
+  adjustTypeExpr (Crawler.ReadersAlternatives.TVar a) = FlatCurry.Types.TVar a
+  adjustTypeExpr (Crawler.ReadersAlternatives.FuncType t1 t2) = FlatCurry.Types.FuncType (adjustTypeExpr t1) (adjustTypeExpr t2)
+  adjustTypeExpr (Crawler.ReadersAlternatives.TCons a ts) = FlatCurry.Types.TCons a (map adjustTypeExpr ts)
+  adjustTypeExpr (Crawler.ReadersAlternatives.ForallType tVarIndexs t) = FlatCurry.Types.ForallType (map adjustTVarIndex tVarIndexs) (adjustTypeExpr t)
 
-        -- Changes an alternative TypeExpr into a normal TypeExpr, by changing the ForallTypes structure
-        adjustTypeExpr :: Crawler.ReadersAlternatives.TypeExpr -> FlatCurry.Types.TypeExpr
-        adjustTypeExpr (Crawler.ReadersAlternatives.TVar a) = FlatCurry.Types.TVar a
-        adjustTypeExpr (Crawler.ReadersAlternatives.FuncType t1 t2) = FlatCurry.Types.FuncType (adjustTypeExpr t1) (adjustTypeExpr t2)
-        adjustTypeExpr (Crawler.ReadersAlternatives.TCons a ts) = FlatCurry.Types.TCons a (map adjustTypeExpr ts)
-        adjustTypeExpr (Crawler.ReadersAlternatives.ForallType tVarIndexs t) = FlatCurry.Types.ForallType (map adjustTVarIndex tVarIndexs) (adjustTypeExpr t)
-
-        adjustTVarIndex :: Crawler.ReadersAlternatives.TVarIndex -> TVarWithKind
-        adjustTVarIndex x = (x, KStar)
+  adjustTVarIndex :: Crawler.ReadersAlternatives.TVarIndex -> TVarWithKind
+  adjustTVarIndex x = (x, KStar)

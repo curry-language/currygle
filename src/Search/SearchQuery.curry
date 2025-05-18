@@ -1,16 +1,17 @@
 ----------------------------------------------------------------------
---- This module provides the data types for search queries in
---- currygle2, and their parsers
+--- This module provides the data types for search queries in Currygle
+--- together with parsers and pretty printers.
 ---
---- @author Helge Knof
---- @version 07.12.2024
+--- @author Helge Knof (with changes by Michael Hanus)
+--- @version May 2025
 ----------------------------------------------------------------------
-module Search.SearchQuery (SearchQuery(..), SearchTerm(..),
-                            parseSearchText)
-  where
+
+module Search.SearchQuery
+  ( SearchQuery(..), SearchTerm(..), prettySearchQuery, parseSearchText )
+ where
 
 import Data.Char
-import Data.List              ( isPrefixOf )
+import Data.List              ( isPrefixOf, scanl )
 import FlatCurry.Types
 
 import Index.Helper           ( strip )
@@ -25,7 +26,19 @@ data SearchQuery = Single SearchTerm
                  | AND SearchQuery SearchQuery   
                  | OR  SearchQuery SearchQuery
                  | NOT SearchQuery SearchQuery
-  deriving Show
+
+prettySearchQuery :: SearchQuery -> String
+prettySearchQuery q = prettySQ False q
+ where
+  prettySQ _  (Single st)   = prettySearchTerm st
+  prettySQ br (AND st1 st2) = prettySQ2 br "AND" st1 st2
+  prettySQ br (OR  st1 st2) = prettySQ2 br "OR"  st1 st2
+  prettySQ br (NOT st1 st2) = prettySQ2 br "NOT" st1 st2
+
+  prettySQ2 br op st1 st2 =
+    bracketIf br (prettySQ True st1 ++ " " ++ op ++ " " ++ prettySQ True st2)
+
+  bracketIf wb s = if wb then "{" ++ s ++ "}" else s
 
 data SearchTerm = Description String
                 | Module String
@@ -41,7 +54,22 @@ data SearchTerm = Description String
                 | Rigid
                 | Signature (Maybe Signature)
                 | All String
-    deriving Show
+
+prettySearchTerm :: SearchTerm -> String
+prettySearchTerm (Description s) = ":description " ++ s -- should not occur
+prettySearchTerm (Module      s) = ":module " ++ s
+prettySearchTerm (InModule    s) = ":inmodule " ++ s
+prettySearchTerm (InPackage   s) = ":inpackage " ++ s
+prettySearchTerm (Function    s) = ":function " ++ s
+prettySearchTerm (Type        s) = ":type " ++ s
+prettySearchTerm (Class       s) = ":class " ++ s
+prettySearchTerm (Author      s) = ":author " ++ s
+prettySearchTerm (Signature   s) = ":signature " ++ maybe "" (prettySig False) s
+prettySearchTerm Det             = ":deterministic"
+prettySearchTerm NonDet          = ":nondeterministic"
+prettySearchTerm Flexible        = ":flexible"
+prettySearchTerm Rigid           = ":rigid"
+prettySearchTerm (All         s) = s
 
 -- Parses a searchtext into a searchquery
 parseSearchText :: String -> Maybe SearchQuery

@@ -12,7 +12,7 @@ import Data.List      ( intersperse )
 import System.IO
 
 import HTML.Base
-import HTML.Styles.Bootstrap4 ( kbdInput )
+import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput )
 import Network.URL     ( string2urlencoded, urlencoded2string )
 import System.FilePath ( (</>) )
 import System.Process  ( system )
@@ -57,19 +57,19 @@ getResultPage withserver showall searchtxt
                              system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
-                            [((items,et),_)] -> return $ resultPage "" items et
+                            [((items,et),_)] -> return $ resultPage query "" items et
                             _                -> return defaultPage
           else resultFromIndex query
  where
   resultFromIndex query = do
     index <- readIndex indexDirPath
-    return $ resultPage " (slow search since server not reachable)"
+    return $ resultPage query " (slow search since server not reachable)"
                         (currygleSearch index query) 0
 
-  resultPage note items etime = curryglePage $
+  resultPage query note items etime = curryglePage $
     [ par $
         [ italic [htxt $ "Search results for "]
-        , kbdInput [htxt searchtxt], htxt $ note ++ ": "
+        , kbdInput [htxt (prettySearchQuery query)], htxt $ note ++ ": "
         , htxt $ "found "
         , htxt $ case num of 0 -> "no entity"
                              1 -> "one entity"
@@ -93,7 +93,7 @@ searchForm = simpleFormDefWithID "WebQuery.searchForm"
       [("class", "form-control mr-sm-2 flex-fill"),
        ("placeholder","Search entities in Curry packages")],
     addAttr (button "Search!" (\env -> getResultPage True False (env ref)))
-            ("class", "btn btn-outline-success my-2 my-sm-0")
+            ("class", "btn btn-outline-light my-2 my-sm-0")
   ]
  where ref free
 
@@ -158,8 +158,8 @@ currygleDescription =
       , (":rigid", "all rigid operations")
       ])
       `addClass` "table table-striped table-sm"
-  , par [ htxt "The keywords  AND and OR can be used as binary infix operators "
-        , htxt "and NOT as a prefix operator to logically combine options."
+  , par [ htxt "The keywords  AND, OR, and NOT can be used as binary infix "
+        , htxt "operators to combine options."
         , htxt "Options can be enclosed in curly braces to allow nested "
         , htxt "expressions." ]
   , par [ htxt "The option keywords can be abbreviated where the abbreviation "
@@ -182,7 +182,7 @@ curryglePage contents =
      [pageLinkInfo [("rel","shortcut icon"), ("href",favIcon)]] ++
      map pageCSS cssIncludes)
     [htmlStruct "nav"  -- top navigation bar
-      [("class","navbar navbar-expand-md navbar-dark fixed-top bg-dark")]
+      [("class","navbar navbar-expand-md navbar-dark fixed-top bg-primary")]
       [href "?" [h1 [htxt "Curr(y)gle"]] `addClass` "navbar-brand",
        formElemWithAttrs searchForm
          [("class","form-inline flex-fill"),
@@ -192,7 +192,7 @@ curryglePage contents =
        [blockstyle "row" [blockstyle (bsCols 12) contents],
         hrule,
         footer currygleFooter `addAttrs`
-         [("style","text-align:center; background-color:hsl(0, 0%, 96%);")]
+         [("style","text-align:center; background-color:hsl(0, 0%, 80%);")]
        ]]
  where
   responsiveView =
@@ -204,7 +204,7 @@ curryglePage contents =
 currygleFooter :: [BaseHtml]
 currygleFooter =
   [par [htxt $ "Curr(y)gle version " ++ packageVersion ++ ", powered by ",
-        href curryURI [htxt "Curry"], nbsp,
+        ehrefDarkBadge curryURI [htxt "Curry"], nbsp,
         image "images/Curry.ico" "Curry"]]
 
 --- The base URL where Bootstrap4 style files etc are stored.
