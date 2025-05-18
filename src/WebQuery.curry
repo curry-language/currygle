@@ -8,7 +8,7 @@
 module WebQuery
     where
 
-import Data.List      ( intersperse )
+import Data.List      ( init, intercalate, last )
 import System.IO
 
 import HTML.Base
@@ -57,8 +57,8 @@ getResultPage withserver showall searchtxt
                              system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
-                            [((items,et),_)] -> return $ resultPage query "" items et
-                            _                -> return defaultPage
+                      [((items,et),_)] -> return $ resultPage query "" items et
+                      _                -> return defaultPage
           else resultFromIndex query
  where
   resultFromIndex query = do
@@ -98,36 +98,49 @@ searchForm = simpleFormDefWithID "WebQuery.searchForm"
  where ref free
 
 -- Format search results.
-searchResults :: [IndexItem] -> BaseHtml
+searchResults :: [(IndexItem,Int)] -> BaseHtml
 searchResults items =
   table (map itemToHtml items) `addClass` "table table-sm table-hover"
  where
-  itemToHtml :: IndexItem -> [[BaseHtml]]
-  itemToHtml (ModuleItem (ModuleIndex name author pack link des)) =
+  itemHeader header score =
+    h5 [htxt header, nbsp,
+        style "badge badge-info" [htxt $ "score " ++ show score]]
+
+  itemToHtml :: (IndexItem,Int) -> [[BaseHtml]]
+  itemToHtml (ModuleItem (ModuleIndex name author pack link des),score) =
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [h3 [htxt $ "module " ++ name],
+        [itemHeader ("module " ++ name) score,
          htxt "author: ", bold [htxt author], breakline,
          htxt "package: ", bold [htxt pack], breakline,
          htxt des]
     ]]
-  itemToHtml (FunctionItem (FunctionIndex name modName pack sig _ _ link des)) =
+  itemToHtml (FunctionItem (FunctionIndex name modName pack sig _ _ link des),score) =
     let sname = if null name || isAlpha (head name)
                   then name
                   else "(" ++ name ++ ")" in
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [bold [htxt $ sname ++ " :: " ++ prettySigs sig], breakline,
-         --htxt (show sig), breakline,
+        [itemHeader (sname ++ " :: " ++ prettySigs sig) score,
          htxt "defined in module: ", bold [htxt modName], breakline,
          htxt "of package: ", bold [htxt pack], breakline,
          htxt des]
     ]]
-  itemToHtml (TypeItem (TypeIndex name modName pack isClass _ link des)) =
+  itemToHtml (TypeItem (TypeIndex name modName pack isClass cs link des),score) =
     [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-        [h3 [htxt $ (if isClass then "class " else "data ") ++ name],
+        [itemHeader (if isClass then "class " ++ name else "data " ++ ppType)
+                    score,
          htxt "defined in module: ", bold [htxt modName], breakline,
          htxt "of package: ", bold [htxt pack], breakline,
          htxt des]
     ]]
+   where
+    -- pretty print the type from the TypeIndex
+    ppType = case cs of
+      [] -> name ++ " ="
+      (c1:_) -> prettySig False (last (snd c1)) ++ " = " ++
+                intercalate " | "
+                  (map (\(c,ts) -> unwords (c : map (prettySig True) (init ts)))
+                       cs)
+
 
 -- The description of Currygle in HTML format.
 currygleDescription :: [BaseHtml]
@@ -135,20 +148,20 @@ currygleDescription =
   [ h4 [htxt "Options to restrict the search:"]
   , headedTable (map (\(x,y) -> [[htxt x], [htxt y]])
       [ ("Option:", "Explanation:")
-      , (":module <module name>"
-        , "all modules containing <module name> in their name")
-      , (":function <function name>"
-        , "all functions containing <function name> in their name")
-      , (":class <class name>"
-        , "all classes containing <class name> in their name")
-      , (":type <type name>"
-        , "all types containing <type name> in their name")
-      , (":inmodule <module name>"
-        , "all entities in modules containing <module name> in their name")
-      , (":inpackage <package name>"
-        , "all entities in packages containing <package name> in their name")
-      , (":author <author name>"
-        , "all modules whose author contains <author name> in their name")
+      , (":module <mname>"
+        , "all modules containing <mname> in their name")
+      , (":function <fname>"
+        , "all functions or data constructors containing <fname> in their name")
+      , (":class <cname>"
+        , "all classes containing <cname> in their name")
+      , (":type <tname>"
+        , "all types containing <tname> in their name")
+      , (":inmodule <mname>"
+        , "all entities in modules containing <mname> in their name")
+      , (":inpackage <pname>"
+        , "all entities in packages containing <pname> in their name")
+      , (":author <name>"
+        , "all modules whose author contains <name> in their name")
       , (":signature <signature>"
         , "all functions containing <signature> in their signature, " ++
           "or types containing a constructor containing <signature>")

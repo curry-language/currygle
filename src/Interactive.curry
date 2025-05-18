@@ -36,12 +36,15 @@ mainLoop index = do
  where
   line = take 60 (repeat '-')
 
-prettyResult :: IndexItem -> String
-prettyResult (TypeItem (TypeIndex name mn pkg _ _ _ _)) =
-  "Type " ++ name ++ " (module " ++ mn ++ ", package " ++ pkg ++ ")"
-prettyResult (FunctionItem (FunctionIndex name mn pkg _ _ _ _ _)) =
-  name ++ " (module " ++ mn ++ ", package " ++ pkg ++ ")"
-prettyResult (ModuleItem (ModuleIndex name _ pkg _ _)) =
-  "Module " ++ name ++ " (package " ++ pkg ++ ")"
+prettyResult :: (IndexItem,Int) -> String
+prettyResult (TypeItem (TypeIndex name mn pkg _ _ _ _),score) =
+  "Type " ++ name ++ " (module " ++ mn ++ ", package " ++ pkg ++ eScore score
+prettyResult (FunctionItem (FunctionIndex name mn pkg _ _ _ _ _),score) =
+  name ++ " (module " ++ mn ++ ", package " ++ pkg ++ eScore score
+prettyResult (ModuleItem (ModuleIndex name _ pkg _ _), score) =
+  "Module " ++ name ++ " (package " ++ pkg ++ eScore score
+
+eScore :: Int -> String
+eScore score = ", score " ++ show score ++ ")"
 
 -----------------------------------------------------------------------------

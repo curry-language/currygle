@@ -80,13 +80,14 @@ prettySigs :: [Signature] -> String
 prettySigs []       = ""
 prettySigs [x]      = prettySig False x
 prettySigs (x:y:xs) = case isClassContext x of
-  Nothing      -> prettySig False x ++ " -> " ++ prettySigs (y:xs)
+  Nothing      -> prettySig False (foldr1 Function (x:y:xs))
   Just (tc,ts) -> prettySig False (Type tc ts) ++ " => " ++ prettySigs (y:xs)
 
 -- Shows a single signature in a pretty way
 prettySig :: Bool -> Signature -> String
-prettySig _  (Var i) = [chr (i + 97)]
-prettySig br (Function s1 s2) = bracketIf True (prettySigs [s1, s2])
+prettySig _  (Var i)          = [chr (i + 97)]
+prettySig br (Function s1 s2) = bracketIf br (prettySig True s1 ++ " -> " ++
+                                              prettySig False s2)
 prettySig br (Type name args)
   | name == "[]" && length args == 1
   = "[" ++ prettySig False (head args) ++ "]"

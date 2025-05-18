@@ -47,6 +47,7 @@ data Index = Index [IndexItem]
                    (Trie Signature (Int, Int))
   deriving (Show, Read)
 
+--- Creates the Currygle search index for the given items.
 createIndex :: [IndexItem] -> Index
 createIndex items =
   Index items
@@ -91,33 +92,19 @@ createIndexFromDir :: String -> IO Index
 createIndexFromDir cdocdir = do
   cipkgs <- getAllCurryInfo cdocdir
   putStrLn "Creating index structures..."
-  let allitems = createIndexItemList cipkgs
-      items    = removeClassFunctions allitems
+  let allitems = concatMap toIndexItem cipkgs
+      items    = filter (not . isClassFunction) allitems
   return $ createIndex items
  where
-  createIndexItemList :: [(CurryInfo, String)] -> [IndexItem]
-  createIndexItemList []           = []
-  createIndexItemList (cDoc:cDocs) = (toIndexItem cDoc) ++ (createIndexItemList cDocs)
-
-  removeClassFunctions :: [IndexItem] -> [IndexItem]
-  removeClassFunctions []     = []
-  removeClassFunctions (i:is) = if isClassFunction i then
-                                  removeClassFunctions is
-                                else
-                                  i:(removeClassFunctions is)
-
   isClassFunction :: IndexItem -> Bool
   isClassFunction (ModuleItem _) = False
-  isClassFunction (TypeItem _) = False
+  isClassFunction (TypeItem _)   = False
   isClassFunction (FunctionItem (FunctionIndex name _ _ _ _ _ _ _)) =
-    has '#' name
+    '#' `elem` name
 
-  has :: Char -> String -> Bool
-  has _ []     = False 
-  has c (x:xs) = or [c == x, has c xs] 
-
--- Strores a index in a directory. It first creates the directory "Index" if it does not exist yet,
--- and then writes all parts of the index seperately into according files.
+-- Stores an index in a directory, where the directory is created
+-- if it does not exist yet, by writing all parts of the index into
+-- seperate files.
 writeIndex :: Index -> String -> IO ()
 writeIndex (Index items descrs mods packs funcs types classes
                   authors det flex sigs) path = do
