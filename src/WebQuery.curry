@@ -15,6 +15,7 @@ import HTML.Base
 import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput )
 import Network.URL     ( string2urlencoded, urlencoded2string )
 import System.FilePath ( (</>) )
+import System.IOExts   ( evalCmd )
 import System.Process  ( system )
 import Text.Markdown   ( markdownText2HTML )
 
@@ -28,16 +29,30 @@ import Search.SearchQuery
 import Server             ( profilingSearchClient, searchClient )
 
 main :: IO HtmlPage
-main = do
-  uparam <- fmap urlencoded2string getUrlParameter
-  if null uparam then return defaultPage
-                 else do let showall = take 4 uparam == ":all"
-                             query   = if showall then drop 4 uparam else uparam
-                         getResultPage True showall query
+main = fmap urlencoded2string getUrlParameter >>= runWithUrlParams
+
+--- Execute script with URL parameter:
+--- - no parameter: interactive mode
+--- - `:status`: show status of server process
+--- - `:all`: show all results of query provided after `:all`
+--- - otherwise: run query provided as parameter
+runWithUrlParams :: String -> IO HtmlPage
+runWithUrlParams uparam
+  | null uparam             = return defaultPage
+  | uparam == ":status"     = getStatusPage
+  | take 4 uparam == ":all" = getResultPage True True (drop 4 uparam)
+  | otherwise               = getResultPage True False uparam
 
 -- Default page with Currygle description.
 defaultPage :: HtmlPage
 defaultPage = curryglePage currygleDescription
+
+-- Page showing status of Currygle server process.
+getStatusPage :: IO HtmlPage
+getStatusPage = do
+  (_,out,_) <- evalCmd "make" ["status"] ""
+  return $ curryglePage
+    [h1 [htxt "Status of Currygle server"], verbatim out]
 
 -- Gets an HtmlRef to a textfield, an HtmlEnv, and creates an HtmlPage from it,
 -- showing the search result for the String in the HtmlEnv under HtmlRef
