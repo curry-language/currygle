@@ -5,7 +5,7 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module WebInterface ( main )
+module WebInterface ( main, searchForm )
  where
 
 import Data.List      ( init, intercalate, last )
@@ -104,7 +104,7 @@ getResultPage withserver showall searchtxt
 
 --- The search form consisting of a field and search button.
 searchForm :: HtmlFormDef ()
-searchForm = simpleFormDefWithID "WebQuery.searchForm"
+searchForm = simpleFormDefWithID "WebInterface.searchForm"
   [ textField ref "" `addAttrs`
       [("class", "form-control mr-sm-2 flex-fill"),
        ("placeholder","Search entities in Curry packages")],
