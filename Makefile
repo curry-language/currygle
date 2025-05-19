@@ -19,9 +19,6 @@ WEBDIR = $(HOME)/public_html/currygle2
 # Executable of the Curry Package Manager to instal the webapp:
 CPM := $(CURRYBIN)/cypm
 
-# directory with all session data:
-SESSIONDATADIR=$(WEBDIR)/sessiondata
-
 # Executable of the curry2cgi:
 CURRY2CGI := $(shell which curry2cgi)
 
@@ -38,7 +35,7 @@ PIDFILE = server.pid
 PID := $(shell if [ -f $(PIDFILE) ] ; then cat $(PIDFILE) ; else echo "" ; fi)
 
 # The main module of the webapp:
-WEBAPPMAIN = WebQuery
+WEBAPPMAIN = WebInterface
 
 ############################################################################
 

@@ -5,7 +5,7 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module WebQuery ( main )
+module WebInterface ( main )
  where
 
 import Data.List      ( init, intercalate, last )
