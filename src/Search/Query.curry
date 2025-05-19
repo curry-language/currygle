@@ -6,7 +6,7 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module Search.SearchQuery
+module Search.Query
   ( SearchQuery(..), SearchTerm(..), prettySearchQuery, parseSearchText )
  where
 

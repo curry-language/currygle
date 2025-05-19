@@ -1,11 +1,10 @@
-----------------------------------------------------------------------
---- This module provides the assignMatchScore function, which assigns
---- a list of IndexItems a score how well they match a searchQuery.
---- This is the core search functionality of currygle2
+------------------------------------------------------------------------------
+--- This module provides operations to execute search queries on a
+--- Currygle index.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
-----------------------------------------------------------------------
+------------------------------------------------------------------------------
 
 module Search.Search ( currygleSearch, profilingCurrygleSearch )
     where
@@ -16,14 +15,16 @@ import Data.Maybe
 import Data.Map
 import FlatCurry.FlexRigid
 import Debug.Profile       ( getElapsedTimeNF )
+import Index.Helper        ( toLowerS )
 import Index.Indexer
 import Index.IndexTrie
 import Index.IndexItem
 import Index.Signature hiding (Function, Type)
-import Search.SearchQuery
+import Search.Query
 import Settings
 
---- Search query in the given index.
+--- Runs a earch query on a given index and returns the found items together
+--- with a score for each item (lower scores are better matchings).
 currygleSearch :: Index -> SearchQuery -> [(IndexItem,Int)]
 currygleSearch index sq = toIndexItems index (search sq index)
 
@@ -37,25 +38,29 @@ toIndexItems (Index items _ _ _ _ _ _ _ _ _ _) scores =
                                         Just item -> [(item, score)])
                     (toList scores))
 
---- Search query in the given index and return the results together with
---- the elapsed time of the search.
+--- Runs a earch query on a given index and returns the found items together
+--- with a score for each item (lower scores are better matchings).
+--- Moreover, the elapsed time of the search is returned in the second
+--- component.
 profilingCurrygleSearch :: Index -> SearchQuery -> IO ([(IndexItem,Int)],Int)
 profilingCurrygleSearch index sq =
   getElapsedTimeNF (return $ currygleSearch index sq)
 
--- Searches with a given search query in the index and returns a map from
+-- Runs a given search query on the index and returns a map from
 -- index items (positions) and the score for this item.
 search :: SearchQuery -> Index -> Map Int Int
 search (Single st) index   = searchForTerm st index
--- For AND searchQuery, do a intersection, and use the worse matchscore (the higher one)
+-- For an AND query, intersect the results and use the worse match score
+-- (i.e., the higher one) as the score of the intersected results.
 search (AND sq1 sq2) index =
   intersectionWith (\x y -> if x < y then y else x)
                    (search sq1 index) (search sq2 index)
--- For OR searchQuery, do a union, and use the better matchscore (the lower one)
+-- For an OR query, compute the union and use the better match score
+-- (i.e., the higher one) as the score of the unified results.
 search (OR sq1 sq2) index  =
   unionWith (\x y -> if x < y then x else y)
             (search sq1 index) (search sq2 index)
--- For NOT searchQuery, do a difference
+-- For a NOT q, compute the difference:
 search (NOT sq1 sq2) index = difference (search sq1 index) (search sq2 index)
 
 -- Searches with a given single search term in the index and returns a map from
@@ -164,3 +169,5 @@ matchRigid KnownRigid = True
 matchRigid KnownFlex = False
 matchRigid ConflictFR = False
 matchRigid UnknownFR = False
+
+------------------------------------------------------------------------------

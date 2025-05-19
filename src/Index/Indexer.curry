@@ -134,51 +134,21 @@ writeIndex (Index items descrs mods packs funcs types classes
 -- Gets the path to an index directory as a string, and returns the stored index
 readIndex :: String -> IO Index
 readIndex indexPath = do
-  itemsM <- readDataFile (indexPath </> indexItemFileName)
-  items <- case itemsM of
-              Nothing -> return (Data.Map.empty :: Map Int IndexItem)
-              Just a  -> return a
-  descrsM <- readDataFile (indexPath </> descrTrieFileName)
-  descrs <- case descrsM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  modsM <- readDataFile (indexPath </> moduleTrieFileName)
-  mods <- case modsM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  packsM <- readDataFile (indexPath </> packageTrieFileName)
-  packs <- case packsM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  funcsM <- readDataFile (indexPath </> functionTrieFileName)
-  funcs <- case funcsM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  typesM <- readDataFile (indexPath </> typeTrieFileName)
-  types <- case typesM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  classesM <- readDataFile (indexPath </> classTrieFileName)
-  classes <- case classesM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  authorsM <- readDataFile (indexPath </> authorTrieFileName)
-  authors <- case authorsM of
-              Nothing -> return (emptyTrie :: Trie Char (Int,Int))
-              Just a  -> return a
-  detM <- readDataFile (indexPath </> detMapFileName)
-  det <- case detM of
-              Nothing -> return (Data.Map.empty :: Map Int Bool)
-              Just a  -> return a
-  flexM <- readDataFile (indexPath </> flexMapFileName)
-  flex <- case flexM of
-              Nothing -> return (Data.Map.empty :: Map Int FlexRigidResult)
-              Just a  -> return a
-  sigsM <- readDataFile (indexPath </> signatureTrieFileName)
-  sigs <- case sigsM of
-              Nothing -> return (emptyTrie :: Trie Signature (Int, Int))
-              Just a  -> return a
+  items  <- fmap mbEmptyMap $ readDataFile (indexPath </> indexItemFileName)
+  descrs <- fmap mbEmptyTrie $ readDataFile (indexPath </> descrTrieFileName)
+  mods   <- fmap mbEmptyTrie $ readDataFile (indexPath </> moduleTrieFileName)
+  packs  <- fmap mbEmptyTrie $ readDataFile (indexPath </> packageTrieFileName)
+  funcs  <- fmap mbEmptyTrie $ readDataFile (indexPath </> functionTrieFileName)
+  types  <- fmap mbEmptyTrie $ readDataFile (indexPath </> typeTrieFileName)
+  classes <- fmap mbEmptyTrie $ readDataFile (indexPath </> classTrieFileName)
+  authors <- fmap mbEmptyTrie $ readDataFile (indexPath </> authorTrieFileName)
+  det  <- fmap mbEmptyMap $ readDataFile (indexPath </> detMapFileName)
+  flex <- fmap mbEmptyMap $ readDataFile (indexPath </> flexMapFileName)
+  sigs <- fmap mbEmptyTrie $ readDataFile (indexPath </> signatureTrieFileName)
   return $ Index items descrs mods packs funcs types classes
                   authors det flex sigs
+ where
+  mbEmptyMap  mb = maybe Data.Map.empty id mb
+  mbEmptyTrie mb = maybe emptyTrie id mb
 
 ------------------------------------------------------------------------------

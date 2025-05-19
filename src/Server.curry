@@ -19,7 +19,7 @@ import Index.Helper       ( strip )
 import Index.Indexer
 import Index.IndexItem
 import Options
-import Search.SearchQuery
+import Search.Query
 import Search.Search
 import Settings           ( indexDirPath, serverSocket )
 

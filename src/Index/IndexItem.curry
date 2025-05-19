@@ -1,24 +1,33 @@
+----------------------------------------------------------------------
+--- This modules defines the various items used in the index structures
+--- and operations to extract information from these items.
+---
+--- @author Helge Knof (with changes by Michael Hanus)
+--- @version May 2025
+----------------------------------------------------------------------
 {-# OPTIONS_FRONTEND -Wno-incomplete-patterns -Wno-unused-bindings #-}
 
 module Index.IndexItem
-    where
+  ( IndexItem(..), ModuleIndex(..), FunctionIndex(..), TypeIndex(..)
+  , descriptionOfItem, getModule, getPackage, getFunctionNames, getTypeName
+  , getClassName, getAuthor, getSignatures, toIndexItem )
+ where
 
 --import System.IO.Unsafe ( unsafePerformIO )
-
-import Index.Signature
+import Data.List      ( isPrefixOf )
+import System.IO
 
 import FlatCurry.Types
 import FlatCurry.FlexRigid
-import Data.List
-import Data.Char
 import System.CurryPath
 import System.FilePath
 
 import Crawler.Readers
+import Index.Signature
+import Index.Helper    ( toLowerS )
 import Settings
 
 import RW.Base
-import System.IO
 
 -- Either a ModuleIndex, a FunctionIndex or a TypeIndex
 data IndexItem = ModuleItem ModuleIndex
@@ -59,14 +68,16 @@ data TypeIndex =
   TypeIndex String String String Bool [(String,[Signature])] String String
   deriving (Show, Read)
 
--- Gets a CurryInfo, and turns it into IndexItems, which are used for the search functionality of currygle2
+-- Turns a CurryInfo term into IndexItems which are used for the
+-- search functionality of Currygle.
 toIndexItem :: (CurryInfo, String) -> [IndexItem]
 toIndexItem (CurryInfo modInfo funcInfos typeInfos, packName) = 
   (moduleInfoToIndexItem modInfo packName
   :(map (\x -> functionInfoToIndexItem x packName) funcInfos))
   ++ (map (\x -> typeInfoToIndexItem x packName) typeInfos)
 
--- Turns a ModuleInfo into a ModuleIndex, used as an index for the search. It needs the package name as extra input.
+-- Turns a ModuleInfo into a ModuleIndex, used as an index for the search.
+-- It needs the package name as extra input.
 moduleInfoToIndexItem :: ModuleInfo -> String -> IndexItem
 moduleInfoToIndexItem (ModuleInfo name author des) packageName = 
   ModuleItem (
@@ -203,14 +214,7 @@ getPackage (ModuleItem (ModuleIndex _ _ pname _ _))           = [toLowerS pname]
 getPackage (FunctionItem (FunctionIndex _ _ pname _ _ _ _ _)) = [toLowerS pname]
 getPackage (TypeItem (TypeIndex _ _ pname _ _ _ _))           = [toLowerS pname]
 
--- Returns the name of the function from a `FunctionItem`.
-getFunctionName :: IndexItem -> Maybe String
-getFunctionName (ModuleItem (ModuleIndex _ _ _ _ _))      = Nothing
-getFunctionName (FunctionItem (FunctionIndex funcName _ _ _ _ _ _ _)) =
-  Just $ toLowerS funcName
-getFunctionName (TypeItem (TypeIndex _ _ _ _ constr _ _)) = Nothing
-
--- Returns the names of functions and constructors.
+-- Returns the names of functions and constructors occurring in an `IndexItem`.
 getFunctionNames :: IndexItem -> [String]
 getFunctionNames (ModuleItem (ModuleIndex _ _ _ _ _))      = []
 getFunctionNames (FunctionItem (FunctionIndex funcName _ _ _ _ _ _ _)) =
@@ -240,9 +244,6 @@ getSignatures :: IndexItem -> Maybe [[Signature]]
 getSignatures (ModuleItem (ModuleIndex _ _ _ _ _)) = Nothing
 getSignatures (FunctionItem (FunctionIndex _ _ _ sig _ _ _ _)) = Just [sig]
 getSignatures (TypeItem (TypeIndex _ _ _ _ constr _ _)) = Just (map snd constr)
-
-toLowerS :: String -> String
-toLowerS s = map toLower s
 
 ----------------------------------
 -- Auto generated stuff fo rw-data

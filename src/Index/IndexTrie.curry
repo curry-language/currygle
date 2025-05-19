@@ -9,7 +9,8 @@
 {-# OPTIONS_FRONTEND -Wno-incomplete-patterns -Wno-unused-bindings #-}
 
 module Index.IndexTrie
-    where
+  ( Trie(..), emptyTrie, addIndexItemsToTrie, createSignatureTrie )
+ where
 
 import Data.Map
 import FlatCurry.Types
@@ -88,16 +89,7 @@ allSuffixes (c:cs)   = (c:cs) : allSuffixes cs
 
 -- Returns all prefixes of a list.
 allPrefixes :: [a] -> [[a]]
-allPrefixes []     = []
-allPrefixes (x:xs) = allPrefixesAcc [x] xs [[x]]
- where
-  -- 1. The previous prefix
-  -- 2. The leftover
-  -- 3. The list of all previous prefixes
-  -- Returns a list of all prefixes
-  allPrefixesAcc :: [a] -> [a] -> [[a]] -> [[a]]
-  allPrefixesAcc _    []     acc = acc
-  allPrefixesAcc prev (l:ls) acc = allPrefixesAcc (prev++[l]) ls ((prev++[l]):acc)
+allPrefixes = map reverse . allSuffixes . reverse
 
 ------------------------------------------------------------------------------
 -- Auto generated code from rw-data

@@ -8,10 +8,14 @@
 
 module Index.Helper where
 
+import Data.Char  ( toLower )
 import System.IO  ( hPutChar )
 
 import Data.Map
 import RW.Base
+
+toLowerS :: String -> String
+toLowerS s = map toLower s
 
 -- Strips leading and trailing spaces from a string.
 strip :: String -> String

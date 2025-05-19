@@ -5,8 +5,8 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module WebQuery
-    where
+module WebQuery ( main )
+ where
 
 import Data.List      ( init, intercalate, last )
 import System.IO
@@ -25,7 +25,7 @@ import Index.Signature
 import PackageConfig      ( packageVersion )
 import Settings
 import Search.Search
-import Search.SearchQuery
+import Search.Query
 import Server             ( profilingSearchClient, searchClient )
 
 main :: IO HtmlPage

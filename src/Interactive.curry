@@ -13,7 +13,7 @@ import Data.Time
 
 import Index.Indexer
 import Index.IndexItem
-import Search.SearchQuery
+import Search.Query
 import Search.Search
 
 -- Execute interactive search w.r.t. a directory containing the index.
