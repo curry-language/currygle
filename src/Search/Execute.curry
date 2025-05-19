@@ -54,13 +54,11 @@ search (Single st) index   = searchForTerm st index
 -- For an AND query, intersect the results and use the worse match score
 -- (i.e., the higher one) as the score of the intersected results.
 search (AND sq1 sq2) index =
-  intersectionWith (\x y -> if x < y then y else x)
-                   (search sq1 index) (search sq2 index)
+  intersectionWith max (search sq1 index) (search sq2 index)
 -- For an OR query, compute the union and use the better match score
--- (i.e., the higher one) as the score of the unified results.
+-- (i.e., the lower one) as the score of the unified results.
 search (OR sq1 sq2) index  =
-  unionWith (\x y -> if x < y then x else y)
-            (search sq1 index) (search sq2 index)
+  unionWith min (search sq1 index) (search sq2 index)
 -- For a NOT q, compute the difference:
 search (NOT sq1 sq2) index = difference (search sq1 index) (search sq2 index)
 

@@ -114,7 +114,7 @@ searchForm :: HtmlFormDef ()
 searchForm = simpleFormDefWithID "WebInterface.searchForm"
   [ textField ref "" `addAttrs`
       [("class", "form-control mr-sm-2 flex-fill"),
-       ("placeholder","Search entities in Curry packages")],
+       ("placeholder","Search in Curry packages")],
     addAttr (button "Search!" (\env -> getResultPage True False (env ref)))
             ("class", "btn btn-outline-light my-2 my-sm-0")
   ]
@@ -172,28 +172,24 @@ currygleDescription :: [BaseHtml]
 currygleDescription =
   [ h4 [htxt "Options to restrict the search:"]
   , headedTable (map (\(x,y) -> [[htxt x], [htxt y]])
-      [ ("Option:", "Explanation:")
-      , (":module <mname>"
-        , "all modules containing <mname> in their name")
+      [ ("Option:", "Searches for")
+      , (":module <mname>", "modules containing <mname> in their name")
       , (":function <fname>"
-        , "all functions or data constructors containing <fname> in their name")
-      , (":class <cname>"
-        , "all classes containing <cname> in their name")
-      , (":type <tname>"
-        , "all types containing <tname> in their name")
+        , "functions or data constructors containing <fname> in their name")
+      , (":class <cname>", "classes containing <cname> in their name")
+      , (":type <tname>", "types containing <tname> in their name")
       , (":inmodule <mname>"
-        , "all entities in modules containing <mname> in their name")
+        , "entities in modules containing <mname> in their name")
       , (":inpackage <pname>"
-        , "all entities in packages containing <pname> in their name")
-      , (":author <name>"
-        , "all modules whose author contains <name> in their name")
+        , "entities in packages containing <pname> in their name")
+      , (":author <name>", "modules whose author contains <name> in their name")
       , (":signature <signature>"
-        , "all functions containing <signature> in their signature, " ++
+        , "functions containing <signature> in their signature, " ++
           "or types containing a constructor containing <signature>")
-      , (":deterministic", "all deterministic operations")
-      , (":nondeterministic", "all non-deterministic operations")
-      , (":flexible", "all flexible operations")
-      , (":rigid", "all rigid operations")
+      , (":deterministic", "deterministic operations")
+      , (":nondeterministic", "non-deterministic operations")
+      , (":flexible", "flexible operations")
+      , (":rigid", "rigid operations")
       ])
       `addClass` "table table-striped table-sm"
   , par [ htxt "The keywords  AND, OR, and NOT can be used as binary infix "
@@ -205,11 +201,16 @@ currygleDescription =
         , htxt "the first possibility according to this table is taken." ]
   , par [ htxt "Example: the following queries show all non-deterministic "
         , htxt "operations defined in the standard prelude:", breakline
-        , code [htxt ":inmodule Prelude AND :nondeteterministic"], breakline
-        , code [htxt ":inm Prelude AND :nondet"], breakline
-        , code [htxt ":i Prelude AND :n"]
+        , kbdInput [htxt ":inmodule Prelude AND :nondeteterministic"], htxt " "
+        , kbdInput [htxt ":inm Prelude AND :nondet"], htxt " "
+        , kbdInput [htxt ":i Prelude AND :n"]
         ]
   ]
+
+-- Explanation text for the search query field:
+queryExplain :: String
+queryExplain =
+  "Query to search in definitions and comments occurring in modules of Curry packages"
 
 ------------------------------------------------------------------------------
 -- The standard HTML page of Currgle:
@@ -223,11 +224,9 @@ curryglePage contents =
       [("class","navbar navbar-expand-md navbar-dark fixed-top bg-primary")]
       [href "?" [h1 [htxt "Curr(y)gle"]] `addClass` "navbar-brand",
        formElemWithAttrs searchForm
-         [("class","form-inline flex-fill"),
-          ("title",
-           "Query to search entities occurring in modules of Curry packages")]],
+         [("class","form-inline flex-fill"), ("title",queryExplain)]],
      blockstyle "container-fluid" $
-       [blockstyle "row" [blockstyle (bsCols 12) contents],
+       [blockstyle "row" [blockstyle "col-sm-12 col-md-12" contents],
         hrule,
         footer currygleFooter `addAttrs`
          [("style","text-align:center; background-color:hsl(0, 0%, 80%);")]
@@ -237,7 +236,6 @@ curryglePage contents =
     pageMetaInfo
       [("name","viewport"),
        ("content","width=device-width, initial-scale=1, shrink-to-fit=no")]
-  bsCols n = "col-sm-" ++ show n ++ " " ++ "col-md-" ++ show n
 
 currygleFooter :: [BaseHtml]
 currygleFooter =
