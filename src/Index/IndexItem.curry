@@ -19,7 +19,6 @@ import System.IO
 
 import FlatCurry.Types
 import FlatCurry.FlexRigid
-import System.CurryPath
 import System.FilePath
 
 import Crawler.Readers
@@ -123,19 +122,6 @@ getName name = if isClass name then drop 6 name else name
 
 isClass :: String -> Bool
 isClass = isPrefixOf "_Dict#"
-
--- Gets the name of a Module, and returns the name of the package
-findPackageName :: String -> IO String
-findPackageName modName =  do
-  paths <- lookupModuleSourceInLoadPath modName
-  return $ case paths of Just (dirPath, _) -> getPackageName dirPath
-                         Nothing           -> ""
- where
-  getPackageName :: String -> String
-  getPackageName path =
-    let directories = (splitPath path) in
-    -- Take the second to last element of the path, and delete the / at the end of it
-    take (length (directories !! (length directories -2)) -1) (directories !! (length directories -2))
 
 -- Takes a list of Constructors, the name of the type, and the variables it has,
 -- and creates a list of lists of constructor signatures,
