@@ -52,10 +52,12 @@ getStatusPage :: IO HtmlPage
 getStatusPage = do
   (_,out,_) <- evalCmd "make" ["status"] ""
   return $ curryglePage
-    [h1 [htxt "Status of Currygle server"], verbatim out]
+    [h1 [htxt "Status of the Currygle server"], verbatim out]
 
--- Gets an HtmlRef to a textfield, an HtmlEnv, and creates an HtmlPage from it,
--- showing the search result for the String in the HtmlEnv under HtmlRef
+-- For a given search string (third argument), performs the search
+-- by contacting the search server (or restart it if not reachable and
+-- do the search locally), and shows the results in a web page.
+-- If the second argument is `True`, show all results.
 getResultPage :: Bool -> Bool -> String -> IO HtmlPage
 getResultPage withserver showall searchtxt
   | all isSpace searchtxt -- no query terms present
@@ -90,17 +92,22 @@ getResultPage withserver showall searchtxt
         , htxt $ case num of 0 -> "no entity"
                              1 -> "one entity"
                              _ -> show num ++ " entities"
-        , htxt $ if etime==0 then "" else " in " ++ show etime ++ " ms" ] ++
-        (if num <= maxresults
-           then []
-           else [ htxt $ " (showing " ++ show (min num maxresults) ++
-                         " results, "
-                , href ('?' : string2urlencoded (":all" ++ searchtxt))
-                [htxt "show all"], htxt ")"])
-    , searchResults $ take maxresults items]
+        , htxt $ if etime==0 then " " else " in " ++ show etime ++ " ms " ] ++
+        if showall
+          then []
+          else [ htxt "("
+               , if num <= maxresults
+                   then htxt ""
+                   else htxt $ "showing " ++ show (min num maxresults) ++
+                               " results, "
+               , showAllButton, htxt ")"]
+    , searchResults showall $ take maxresults items]
    where
-    num        = length items
-    maxresults = if showall then num else maxSearchResults
+    num           = length items
+    maxresults    = if showall then num else maxSearchResults
+    showAllButton = href ('?' : string2urlencoded (":all" ++ searchtxt))
+                         [htxt $ "show " ++
+                                 if num>maxresults then "all" else "scores"]
 
 --- The search form consisting of a field and search button.
 searchForm :: HtmlFormDef ()
@@ -114,13 +121,15 @@ searchForm = simpleFormDefWithID "WebInterface.searchForm"
  where ref free
 
 -- Format search results.
-searchResults :: [(IndexItem,Int)] -> BaseHtml
-searchResults items =
+searchResults :: Bool -> [(IndexItem,Int)] -> BaseHtml
+searchResults showscore items =
   table (map itemToHtml items) `addClass` "table table-sm table-hover"
  where
-  itemHeader header score =
-    h5 [htxt header, nbsp,
-        style "badge badge-info" [htxt $ "score " ++ show score]]
+  itemHeader header score = h5 $
+    [htxt header] ++
+    if showscore
+      then [nbsp, style "badge badge-info" [htxt $ "score " ++ show score]]
+      else []
 
   -- format markdown text:
   ppDesc = markdownText2HTML
