@@ -24,7 +24,7 @@ import Index.Indexer
 import Index.Signature
 import PackageConfig      ( packageVersion )
 import Settings
-import Search.Search
+import Search.Execute
 import Search.Query
 import Server             ( profilingSearchClient, searchClient )
 

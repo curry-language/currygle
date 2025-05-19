@@ -14,7 +14,7 @@ import Data.Time
 import Index.Indexer
 import Index.IndexItem
 import Search.Query
-import Search.Search
+import Search.Execute
 
 -- Execute interactive search w.r.t. a directory containing the index.
 searchInteractive :: FilePath -> IO ()

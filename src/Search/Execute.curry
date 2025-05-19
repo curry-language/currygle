@@ -6,8 +6,9 @@
 --- @version May 2025
 ------------------------------------------------------------------------------
 
-module Search.Search ( currygleSearch, profilingCurrygleSearch )
-    where
+module Search.Execute
+  ( currygleSearch, profilingCurrygleSearch )
+ where
 
 import Data.List
 import Data.Maybe

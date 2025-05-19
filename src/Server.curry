@@ -20,7 +20,7 @@ import Index.Indexer
 import Index.IndexItem
 import Options
 import Search.Query
-import Search.Search
+import Search.Execute
 import Settings           ( indexDirPath, serverSocket )
 
 ------------------------------------------------------------------------------
