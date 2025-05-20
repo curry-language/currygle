@@ -17,12 +17,13 @@ import Index.Indexer ( createIndexFromDir, writeIndex )
 import Options
 import PackageConfig ( packageVersion )
 import Server        ( startServer, stopServer )
-import Settings      ( indexDirPath )
+import Settings      ( indexDirPath, currygleDate )
 
 banner :: String
 banner = unlines [bannerLine, bannerText, bannerLine]
  where
-  bannerText = "Currygle (Version " ++ packageVersion ++ " of 19/05/25)"
+  bannerText = "Currygle (Version " ++ packageVersion ++ " of " ++
+               currygleDate ++ ")"
   bannerLine = take (length bannerText) (repeat '=')
 
 main :: IO ()

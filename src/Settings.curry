@@ -9,6 +9,10 @@
 module Settings
   where
 
+-- The version date of Currygle
+currygleDate :: String
+currygleDate = "20/05/25"
+
 -- The maximum amount of results returned by a search 
 maxSearchResults :: Int
 maxSearchResults = 100
@@ -47,7 +51,7 @@ signatureTrieFileName :: String
 signatureTrieFileName = "SignatureTrie.txt"
 
 
--- The base Url the documentation is stored online on
+-- The base URL of the online documentation of Curry packages.
 baseUrlForDocumentation :: String
 baseUrlForDocumentation = "https://cpm.curry-lang.org/DOC/"
 

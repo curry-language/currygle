@@ -16,7 +16,6 @@
     "html2"       : ">= 3.0.0, < 4.0.0",
     "io-extra"    : ">= 3.0.0, < 4.0.0",
     "markdown"    : ">= 3.3.0, < 4.0.0",
-    "profiling"   : ">= 3.0.0, < 4.0.0",
     "process"     : ">= 3.0.0, < 4.0.0",
     "rw-data"     : ">= 1.0.0",
     "socket"      : ">= 3.0.0, < 4.0.0",
@@ -26,8 +25,6 @@
   "configModule": "PackageConfig",
   "executable": {
     "name": "currygle",
-    "main": "Main",
-    "options": { "kics2" : ":set rts -T",
-                 "kmcc"  : ":set rts -T" }
+    "main": "Main"
   }
 }

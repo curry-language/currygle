@@ -9,8 +9,6 @@
 module Interactive ( searchInteractive )
   where
 
-import Data.Time
-
 import Index.Indexer
 import Index.IndexItem
 import Search.Query

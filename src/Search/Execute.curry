@@ -12,10 +12,11 @@ module Search.Execute
 
 import Data.List
 import Data.Maybe
+import System.CPUTime ( getCPUTime )
 
 import Data.Map
 import FlatCurry.FlexRigid
-import Debug.Profile       ( getElapsedTimeNF )
+
 import Index.Helper        ( toLowerS )
 import Index.Indexer
 import Index.IndexTrie
@@ -44,8 +45,11 @@ toIndexItems (Index items _ _ _ _ _ _ _ _ _ _) scores =
 --- Moreover, the elapsed time of the search is returned in the second
 --- component.
 profilingCurrygleSearch :: Index -> SearchQuery -> IO ([(IndexItem,Int)],Int)
-profilingCurrygleSearch index sq =
-  getElapsedTimeNF (return $ currygleSearch index sq)
+profilingCurrygleSearch index sq = do
+  starttime <- getCPUTime
+  results   <- return $!! currygleSearch index sq
+  stoptime  <- getCPUTime
+  return (results, stoptime - starttime)
 
 -- Runs a given search query on the index and returns a map from
 -- index items (positions) and the score for this item.

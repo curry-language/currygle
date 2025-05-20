@@ -239,7 +239,8 @@ curryglePage contents =
 
 currygleFooter :: [BaseHtml]
 currygleFooter =
-  [par [htxt $ "Curr(y)gle version " ++ packageVersion ++ ", powered by ",
+  [par [htxt $ "Curr(y)gle (Version " ++ packageVersion ++ " of " ++
+               currygleDate ++ "), powered by ",
         ehrefDarkBadge curryURI [htxt "Curry"], nbsp,
         image "images/Curry.ico" "Curry"]]
 
