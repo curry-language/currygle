@@ -5,19 +5,20 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module WebInterface ( main, searchForm )
+module WebInterface --( main, searchForm )
  where
 
-import Data.List      ( init, intercalate, last )
+import Data.List      ( init, intercalate, last, split )
 import System.IO
 
 import HTML.Base
-import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput )
-import Network.URL     ( string2urlencoded, urlencoded2string )
-import System.FilePath ( (</>) )
-import System.IOExts   ( evalCmd )
-import System.Process  ( system )
-import Text.Markdown   ( markdownText2HTML )
+import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput, hrefInfoBadge )
+import Network.URL      ( string2urlencoded, urlencoded2string )
+import System.Directory ( doesFileExist )
+import System.FilePath  ( (</>) )
+import System.IOExts    ( evalCmd )
+import System.Process   ( system )
+import Text.Markdown    ( markdownText2HTML )
 
 import Index.IndexItem
 import Index.Indexer
@@ -75,39 +76,42 @@ getResultPage withserver showall searchtxt
                              system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
-                      [((items,et),_)] -> return $ resultPage query "" items et
+                      [((items,et),_)] -> resultPage query "" items et
                       _                -> return defaultPage
           else resultFromIndex query
  where
   resultFromIndex query = do
     index <- readIndex indexDirPath
-    return $ resultPage query " (slow search since server not reachable)"
+    resultPage query " (slow search since server not reachable)"
                         (currygleSearch index query) 0
 
-  resultPage query note items etime = curryglePage $
-    [ par $
-        [ italic [htxt $ "Search results for "]
-        , kbdInput [htxt (prettySearchQuery query)], htxt $ note ++ ": "
-        , htxt $ "found "
-        , htxt $ case num of 0 -> "no entity"
-                             1 -> "one entity"
-                             _ -> show num ++ " entities"
-        , htxt $ if etime==0 then " " else " in " ++ show etime ++ " ms " ] ++
-        if showall
-          then []
-          else [ htxt "("
-               , if num <= maxresults
-                   then htxt ""
-                   else htxt $ "showing " ++ show (min num maxresults) ++
-                               " results, "
-               , showAllButton, htxt ")"]
-    , searchResults showall $ take maxresults items]
+  resultPage query note items etime = do
+    htmlresults <- searchResults2HTML showall $ take maxresults items
+    return $ curryglePage $
+      [ par $
+          [ italic [htxt $ "Search results for "]
+          , kbdInput [htxt (prettySearchQuery query)], htxt $ note ++ ": "
+          , htxt $ "found "
+          , htxt $ case num of 0 -> "no entity"
+                               1 -> "one entity"
+                               _ -> show num ++ " entities"
+          , htxt $ if etime==0 then " " else " in " ++ show etime ++ " ms " ] ++
+          if showall
+            then []
+            else [ htxt "("
+                , if num <= maxresults
+                    then htxt ""
+                    else htxt $ "showing " ++ show (min num maxresults) ++
+                                " results, "
+                , showAllButton, htxt ")"]
+      , htmlresults]
    where
     num           = length items
     maxresults    = if showall then num else maxSearchResults
-    showAllButton = href ('?' : string2urlencoded (":all" ++ searchtxt))
-                         [htxt $ "show " ++
-                                 if num>maxresults then "all" else "scores"]
+    showAllButton = hrefInfoBadge
+                      ('?' : string2urlencoded (":all" ++ searchtxt))
+                      [htxt $ "show " ++
+                              if num>maxresults then "all" else "scores"]
 
 --- The search form consisting of a field and search button.
 searchForm :: HtmlFormDef ()
@@ -121,51 +125,61 @@ searchForm = simpleFormDefWithID "WebInterface.searchForm"
  where ref free
 
 -- Format search results.
-searchResults :: Bool -> [(IndexItem,Int)] -> BaseHtml
-searchResults showscore items =
-  table (map itemToHtml items) `addClass` "table table-sm table-hover"
+searchResults2HTML :: Bool -> [(IndexItem,Int)] -> IO BaseHtml
+searchResults2HTML showscore items = do
+  hitems <- mapM itemToHtml items
+  return $ (table hitems `addClass` "table table-sm table-hover")
  where
   itemHeader header score = h5 $
-    [htxt header] ++
+    [htxt header, nbsp] ++
     if showscore
-      then [nbsp, style "badge badge-info" [htxt $ "score " ++ show score]]
+      then [nbsp, style "badge badge-dark" [htxt $ "score " ++ show score]]
       else []
 
   -- format markdown text:
   ppDesc = markdownText2HTML
 
-  itemToHtml :: (IndexItem,Int) -> [[BaseHtml]]
+  addLink url curryinforefbutton hitems = 
+    [[hrefInfoBadge url [htxt "Documentation"], nbsp] ++ curryinforefbutton ++ 
+     [blockstyle "resultitem" [href url [block hitems]]]
+    ]
+
+  itemToHtml :: (IndexItem,Int) -> IO [[BaseHtml]]
   itemToHtml (ModuleItem (ModuleIndex name author pack link des),score) =
-    [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-       ([itemHeader ("module " ++ name) score,
-         htxt "author: ", bold [htxt author], breakline,
-         htxt "package: ", bold [htxt pack], breakline] ++ ppDesc des)
-    ]]
-  itemToHtml (FunctionItem (FunctionIndex name modName pack sig _ _ link des),score) =
+    return $ addLink link [] $
+      [itemHeader ("module " ++ name) score,
+       htxt "author: ", bold [htxt author], breakline,
+       htxt "package: ", bold [htxt pack], breakline] ++ ppDesc des
+  itemToHtml (FunctionItem
+                (FunctionIndex name modName pack sig _ _ link des),score) = do
+    let cifname = operationAnalysisFile pack modName name
+    ciexists <- if null cifname then return False else doesFileExist cifname
     let sname = if null name || isAlpha (head name)
                   then name
-                  else "(" ++ name ++ ")" in
-    [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-       ([itemHeader (sname ++ " :: " ++ prettySigs sig) score,
-         htxt "defined in module: ", bold [htxt modName], breakline,
-         htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des)
-    ]]
+                  else "(" ++ name ++ ")"
+    return $ addLink link
+            (if ciexists then function2CurryInfoRef pack modName name else []) $
+      [itemHeader (sname ++ " :: " ++ prettySigs sig) score,
+       htxt "defined in module: ", bold [htxt modName], breakline,
+       htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des
   itemToHtml (TypeItem (TypeIndex name modName pack isClass cs link des),score) =
-    [[BaseStruct "div" [("onclick","window.location='" ++ link ++ "';")]
-       ([itemHeader (if isClass then "class " ++ name else "data " ++ ppType)
-                    score,
-         htxt "defined in module: ", bold [htxt modName], breakline,
-         htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des)
-    ]]
+    return $ addLink link [] $
+      [itemHeader (if isClass then "class " ++ name else "data " ++ ppType)
+                  score,
+       htxt "defined in module: ", bold [htxt modName], breakline,
+       htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des
    where
     -- pretty print the type from the TypeIndex
     ppType = case cs of
-      [] -> name ++ " ="
+      []     -> name ++ " ="
       (c1:_) -> prettySig False (last (snd c1)) ++ " = " ++
                 intercalate " | "
                   (map (\(c,ts) -> unwords (c : map (prettySig True) (init ts)))
                        cs)
 
+  function2CurryInfoRef pkgid mname ename =
+    let url = operationAnalysisURL pkgid mname ename in
+    if null url then [] else [hrefInfoBadge url [htxt "Analysis Information"]]
 
 -- The description of Currygle in HTML format.
 currygleDescription :: [BaseHtml]
