@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
---- This module contains the definition of the index for Currygle
+--- This module contains the definition of the Currygle index
 --- and operations to read and write the index in a compact form.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)

@@ -72,7 +72,7 @@ search (NOT sq1 sq2) index = difference (search sq1 index) (search sq2 index)
 -- descriptions are shown below other items, like entities names.
 searchForTerm :: SearchTerm -> Index -> Map Int Int
 searchForTerm (Description st) (Index _ descr _ _ _ _ _ _ _ _ _) =
-  -- adjust score of description search:
+  -- adjust score of description search so that they are shown later:
   mapWithKey (\_ v -> (v+5)) (textSearch descr (toLowerS st))
 searchForTerm (Module st) (Index items _ modName _ _ _ _ _ _ _ _) =
   filterModuleResults items (trieSearch modName (toLowerS st))
@@ -144,8 +144,8 @@ trieTextSearch (Node subTries  _)      (t:ts) =
 
 
 -- Searches for a key in a Trie, and returns a result Map.
--- The key of the map is the position of the found element in the IndexItem list, and
--- the value is the matchscore, the higher the worse.
+-- The key of the map is the position of the found element in the IndexItem
+-- list, and the value is the match score, the higher the worse.
 trieSearch :: Ord k => Trie k (Int, Int) -> [k] -> Map Int Int
 trieSearch trie searchTerm =
   mapWithKey (\_ v -> v - (length searchTerm)) (trieKeySearch trie searchTerm)
@@ -159,18 +159,18 @@ trieKeySearch (Node subTries  _)      (t:ts)
         else
             Data.Map.empty
 
--- Returns 1 if the FlexRigidResult is known to be flexible, otherwise returns 0
+-- Is the FlexRigidResult flexible?
 matchFlex :: FlexRigidResult -> Bool
 matchFlex KnownRigid = False
-matchFlex KnownFlex = True
+matchFlex KnownFlex  = True
 matchFlex ConflictFR = False
-matchFlex UnknownFR = False
+matchFlex UnknownFR  = False
 
--- Returns 1 if the FlexRigidResult is known to be rigid, otherwise returns 0
+-- Is the FlexRigidResult rigid?
 matchRigid :: FlexRigidResult -> Bool
 matchRigid KnownRigid = True
-matchRigid KnownFlex = False
+matchRigid KnownFlex  = False
 matchRigid ConflictFR = False
-matchRigid UnknownFR = False
+matchRigid UnknownFR  = False
 
 ------------------------------------------------------------------------------
