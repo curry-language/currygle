@@ -9,7 +9,7 @@
 module Settings
   where
 
-import Data.List ( split )
+import Data.List ( isPrefixOf, split )
 import System.FilePath ( (</>), splitExtension )
 
 ------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ moduleDocumentationUrl packageid modname =
 --- and entity name.
 entityDocumentationUrl :: String -> String -> String -> String
 entityDocumentationUrl packageid modname ename =
-  moduleDocumentationUrl packageid modname ++ "#" ++ ename
+  moduleDocumentationUrl packageid modname ++ "#" ++ stripClassNamePrefix ename
 
 --- Transforms a documentation URL into the URL of the source code.
 --- Basically, add `_curry` before the `.html` extension.
@@ -111,13 +111,22 @@ baseCurryInfoDir =
   "/var/www/vhosts/curry-lang.org/cpm.curry-lang.org/curry-info/HTML/packages"
 
 --- Returns the file name of the online analysis page for a package version,
--- module, and operation name.
+--- module, and operation name.
 operationAnalysisFile :: String -> String -> String -> String
 operationAnalysisFile pkgid mname ename = case packageVersionOfPkgId pkgid of
   Nothing            -> ""
   Just (pname,pvers) -> baseCurryInfoDir </> pname </> "versions" </>
                         pvers </> "modules" </> mname </>
                         "operations" </> encodeFilePath ename ++ ".html"
+
+--- Is the identifier a class name?
+isClassName :: String -> Bool
+isClassName = isPrefixOf "_Dict#"
+
+-- If a name is a class name, strips the internal class name prefix
+-- to get the regular name of the class.
+stripClassNamePrefix :: String -> String
+stripClassNamePrefix name = if isClassName name then drop 6 name else name
 
 ------------------------------------------------------------------------------
 -- Auxiliary operations.

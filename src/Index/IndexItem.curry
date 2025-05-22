@@ -106,22 +106,13 @@ typeInfoToIndexItem :: TypeInfo -> String -> IndexItem
 typeInfoToIndexItem (TypeInfo name constructors vars modName des _) package =
     TypeItem (
       TypeIndex
-        ((getName name))
+        ((stripClassNamePrefix name))
         modName
         package
-        (isClass name)
-        (constrToSigs constructors (getName name) vars)
+        (isClassName name)
+        (constrToSigs constructors (stripClassNamePrefix name) vars)
         (entityDocumentationUrl package modName name)
         des)
-
--- Gets a name from a TypeInfo, and returns the name for the TypeIndex.
--- If the TypeInfo was a class, it has a prefix to indicate that,
--- which this function gets rid of
-getName :: String -> String
-getName name = if isClass name then drop 6 name else name
-
-isClass :: String -> Bool
-isClass = isPrefixOf "_Dict#"
 
 -- Takes a list of Constructors, the name of the type, and the variables it has,
 -- and creates a list of lists of constructor signatures,
