@@ -90,7 +90,10 @@ prettySig br (Function s1 s2) = bracketIf br (prettySig True s1 ++ " -> " ++
                                               prettySig False s2)
 prettySig br (Type name args)
   | name == "[]" && length args == 1
-  = "[" ++ prettySig False (head args) ++ "]"
+  = let arg = head args
+    in if arg == Type "Char" []
+          then "String"
+          else "[" ++ prettySig False arg ++ "]"
   | take 2 name == "(,"
   = "(" ++ intercalate "," (map (prettySig False) args) ++ ")"
   | name == "Apply" && length args == 2 -- type constructore application

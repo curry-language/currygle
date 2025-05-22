@@ -1,22 +1,25 @@
-----------------------------------------------------------------------
---- This module contains the settings of Currygle2, such as paths to files
---- and directories.
+------------------------------------------------------------------------------
+--- This module contains the settings of Currygle2, such as global constants,
+--- like paths to files and directories, and URLs to which Currygle referes.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
-----------------------------------------------------------------------
+------------------------------------------------------------------------------
 
 module Settings
   where
 
 import Data.List ( split )
-import System.FilePath ( (</>) )
+import System.FilePath ( (</>), splitExtension )
 
--- The version date of Currygle
+------------------------------------------------------------------------------
+-- Some constants.
+
+--- The version date of Currygle.
 currygleDate :: String
-currygleDate = "21/05/25"
+currygleDate = "22/05/25"
 
--- The maximum amount of results returned by a search 
+--- The maximum amount of results returned by a search.
 maxSearchResults :: Int
 maxSearchResults = 50
 
@@ -61,27 +64,40 @@ indexDirPath = "INDEX"
 serverSocket :: Int
 serverSocket = 12354
 
--- The base URL of the online documentation of Curry packages.
+------------------------------------------------------------------------------
+-- Some URLs to which Currygle refers.
+
+--- The base URL of the online documentation of Curry packages.
 baseUrlForDocumentation :: String
 baseUrlForDocumentation = "https://cpm.curry-lang.org/DOC/"
 
--- Returns the URL of the online documentation for a package and module name.
+--- Returns the URL of the online documentation for a package and module name.
 moduleDocumentationUrl :: String -> String -> String
-moduleDocumentationUrl packageName modName =
-  baseUrlForDocumentation ++ "/" ++ packageName ++ "/" ++ modName ++ ".html"
+moduleDocumentationUrl packageid modname =
+  baseUrlForDocumentation ++ "/" ++ packageid ++ "/" ++ modname ++ ".html"
 
--- Returns the URL of the online documentation for a package version, module,
--- and entity name.
+--- Returns the URL of the online documentation for a package version, module,
+--- and entity name.
 entityDocumentationUrl :: String -> String -> String -> String
-entityDocumentationUrl packageName modName funcName =
-  moduleDocumentationUrl packageName modName ++ "#" ++ funcName
+entityDocumentationUrl packageid modname ename =
+  moduleDocumentationUrl packageid modname ++ "#" ++ ename
 
--- The base URL of the online analysis of Curry packages.
+--- Transforms a documentation URL into the URL of the source code.
+--- Basically, add `_curry` before the `.html` extension.
+docUrl2SourceCodeUrl :: String -> String
+docUrl2SourceCodeUrl docurl =
+  let (htmlpart,hashsuffix) = break (=='#') docurl
+      (htmlbase,htmlext)    = splitExtension htmlpart
+  in if htmlext == ".html"
+       then htmlbase ++ "_curry" ++ htmlext ++ hashsuffix
+       else ""
+
+--- The base URL of the online analysis of Curry packages.
 baseCurryInfoUrl :: String
 baseCurryInfoUrl = "https://cpm.curry-lang.org/curry-info/HTML/packages/"
 
--- Returns the URL of the online analysis page for a package version, module,
--- and operation name.
+--- Returns the URL of the online analysis page for a package version, module,
+--- and operation name.
 operationAnalysisURL :: String -> String -> String -> String
 operationAnalysisURL pkgid mname ename = case packageVersionOfPkgId pkgid of
   Nothing            -> ""
@@ -89,12 +105,12 @@ operationAnalysisURL pkgid mname ename = case packageVersionOfPkgId pkgid of
                         pvers ++ "/modules/" ++ mname ++
                         "/operations/" ++ encodeFilePath ename ++ ".html"
 
--- The base directory of the online analysis pages on the server.
+--- The base directory of the online analysis pages on the server.
 baseCurryInfoDir :: String
 baseCurryInfoDir =
   "/var/www/vhosts/curry-lang.org/cpm.curry-lang.org/curry-info/HTML/packages"
 
--- Returns the file name of the online analysis page for a package version,
+--- Returns the file name of the online analysis page for a package version,
 -- module, and operation name.
 operationAnalysisFile :: String -> String -> String -> String
 operationAnalysisFile pkgid mname ename = case packageVersionOfPkgId pkgid of
@@ -104,6 +120,8 @@ operationAnalysisFile pkgid mname ename = case packageVersionOfPkgId pkgid of
                         "operations" </> encodeFilePath ename ++ ".html"
 
 ------------------------------------------------------------------------------
+-- Auxiliary operations.
+
 -- Splits a string containing a package id into the package and version id.
 packageVersionOfPkgId :: String -> Maybe (String,String)
 packageVersionOfPkgId pid = splitPkgId "" pid

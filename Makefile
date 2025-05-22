@@ -37,6 +37,9 @@ PID := $(shell if [ -f $(PIDFILE) ] ; then cat $(PIDFILE) ; else echo "" ; fi)
 # The main module of the webapp:
 WEBAPPMAIN = WebInterface
 
+# The sources of the application:
+SOURCES = src/*.curry src/*/*.curry
+
 ############################################################################
 
 .PHONY: all
@@ -105,7 +108,7 @@ $(WEBDIR):
 .PHONY: indexer
 indexer: $(WEBDIR)/bin/$(CURRYGLE)
 
-$(WEBDIR)/bin/$(CURRYGLE): src/*.curry src/*/*.curry | $(WEBDIR)
+$(WEBDIR)/bin/$(CURRYGLE): $(SOURCES) | $(WEBDIR)
 	mkdir -p $(WEBDIR)/bin
 	$(CPM) --define BIN_INSTALL_PATH=$(WEBDIR)/bin install
 
@@ -119,13 +122,17 @@ checkdeploy:
 # create/install web interface script
 .PHONY: deploy
 deploy: checkdeploy $(WEBDIR)/bin/$(CURRYGLE) | $(WEBDIR)
-	$(MAKE) $(WEBDIR)/main.cgi
+	$(MAKE) webinterface
 	# copy other files (style sheets, images,...)
 	cp -r public/* $(WEBDIR)
 	chmod -R go+rX $(WEBDIR)
 	cp Makefile $(WEBDIR)
 
-$(WEBDIR)/main.cgi: src/*.curry
+# Install the web interface:
+.PHONY: webinterface
+webinterface: $(WEBDIR)/main.cgi
+
+$(WEBDIR)/main.cgi: $(SOURCES)
 	$(CPM) exec $(CURRY2CGI) --cpm=$(CPM) --system="$(CURRYHOME)" \
 	  --ulimit=\"-t 300\" -i $(WEBAPPMAIN) -o $@ $(WEBAPPMAIN)
 

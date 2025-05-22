@@ -76,16 +76,16 @@ getResultPage withserver showall searchtxt
                              system "make restart >> SERVER.LOG"
                              resultFromIndex query
               Just res -> case reads res of
-                      [((items,et),_)] -> resultPage query "" items et
+                      [((items,et),_)] -> getItemspage query "" items et
                       _                -> return defaultPage
           else resultFromIndex query
  where
   resultFromIndex query = do
     index <- readIndex indexDirPath
-    resultPage query " (slow search since server not reachable)"
+    getItemspage query " (slow search since server not reachable)"
                         (currygleSearch index query) 0
 
-  resultPage query note items etime = do
+  getItemspage query note items etime = do
     htmlresults <- searchResults2HTML showall $ take maxresults items
     return $ curryglePage $
       [ par $
@@ -139,10 +139,14 @@ searchResults2HTML showscore items = do
   -- format markdown text:
   ppDesc = markdownText2HTML
 
-  addLink url curryinforefbutton hitems = 
-    [[hrefInfoBadge url [htxt "Documentation"], nbsp] ++ curryinforefbutton ++ 
-     [blockstyle "resultitem" [href url [block hitems]]]
+  addLink docurl curryinforefbutton hitems =
+    [[hrefInfoBadge docurl [htxt "Documentation"], nbsp] ++
+      (if null srcurl then []
+                      else [hrefInfoBadge srcurl [htxt "Source code"], nbsp]) ++
+      curryinforefbutton ++ 
+     [blockstyle "resultitem" [href docurl [block hitems]]]
     ]
+   where srcurl = docUrl2SourceCodeUrl docurl
 
   itemToHtml :: (IndexItem,Int) -> IO [[BaseHtml]]
   itemToHtml (ModuleItem (ModuleIndex name author pack link des),score) =
