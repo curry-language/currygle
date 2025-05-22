@@ -154,3 +154,5 @@ instance ReadWrite Signature where
   writeRW params h (Var a') strs = hPutChar h '2' >> writeRW params h a' strs
 
   typeOf _ = monoRWType "Signature"
+  
+------------------------------------------------------------------------------

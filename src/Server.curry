@@ -17,7 +17,7 @@ import System.Process     ( sleep )
 
 import Index.Helper       ( strip )
 import Index.Indexer
-import Index.IndexItem
+import Index.Item
 import Options
 import Search.Query
 import Search.Execute

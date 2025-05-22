@@ -19,8 +19,8 @@ import System.FilePath  ( (</>) )
 
 import Crawler.Crawler
 import Crawler.Readers
-import Index.IndexTrie
-import Index.IndexItem
+import Index.Trie
+import Index.Item
 import Index.Signature
 import Settings
 
@@ -59,12 +59,12 @@ createIndex :: [IndexItem] -> Index
 createIndex items =
   Index (fromList nitems)
         (addIndexItemsToTrie descriptionOfItem nitems)
-        (addIndexItemsToTrie getModule         nitems)
-        (addIndexItemsToTrie getPackage        nitems)
-        (addIndexItemsToTrie getFunctionNames  nitems)
-        (addIndexItemsToTrie getTypeName       nitems)
-        (addIndexItemsToTrie getClassName      nitems)
-        (addIndexItemsToTrie getAuthor         nitems)
+        (addIndexItemsToTrie moduleOfItem        nitems)
+        (addIndexItemsToTrie packageOfItem       nitems)
+        (addIndexItemsToTrie functionNamesOfItem nitems)
+        (addIndexItemsToTrie typeNameOfItem      nitems)
+        (addIndexItemsToTrie classNameOfItem     nitems)
+        (addIndexItemsToTrie authorOfItem        nitems)
         (createDetMap nitems)
         (createFlexMap nitems)
         (createSignatureTrie nitems)
@@ -77,9 +77,9 @@ createDetMap :: [(Int,IndexItem)] -> Map Int Bool
 createDetMap items = cDetMap items
  where
   cDetMap []                     = Data.Map.empty
-  cDetMap ((_,ModuleItem _):iis) = cDetMap iis
-  cDetMap ((_,TypeItem _):iis)   = cDetMap iis
-  cDetMap ((x,FunctionItem (FunctionIndex _ _ _ _ det _ _ _)):iis) =
+  cDetMap ((_,ModuleItem _ _ _ _):iis) = cDetMap iis
+  cDetMap ((_,TypeItem _ _ _ _ _ _):iis)   = cDetMap iis
+  cDetMap ((x,FunctionItem _ _ _ _ det _ _):iis) =
     insert x det (cDetMap iis)
 
 -- Creates a map, where a Int representing the position of a FunctionItem in the IndexItem list
@@ -88,9 +88,9 @@ createFlexMap :: [(Int,IndexItem)] -> Map Int FlexRigidResult
 createFlexMap items = cFlexMap items
  where
   cFlexMap []                     = Data.Map.empty
-  cFlexMap ((_,ModuleItem _):iis) = cFlexMap iis
-  cFlexMap ((_,TypeItem _):iis)   = cFlexMap iis
-  cFlexMap ((x,FunctionItem (FunctionIndex _ _ _ _ _ flex _ _)):iis) =
+  cFlexMap ((_,ModuleItem _ _ _ _):iis) = cFlexMap iis
+  cFlexMap ((_,TypeItem _ _ _ _ _ _):iis)   = cFlexMap iis
+  cFlexMap ((x,FunctionItem _ _ _ _ _ flex _):iis) =
     insert x flex (cFlexMap iis)
 
 -- Creates an index from `.cdoc` files (as produced by CurryDoc) stored in
@@ -104,10 +104,9 @@ createIndexFromDir cdocdir = do
   return $ createIndex items
  where
   isClassFunction :: IndexItem -> Bool
-  isClassFunction (ModuleItem _) = False
-  isClassFunction (TypeItem _)   = False
-  isClassFunction (FunctionItem (FunctionIndex name _ _ _ _ _ _ _)) =
-    '#' `elem` name
+  isClassFunction (ModuleItem _ _ _ _) = False
+  isClassFunction (TypeItem _ _ _ _ _ _)   = False
+  isClassFunction (FunctionItem name _ _ _ _ _ _) = '#' `elem` name
 
 -- Stores an index in a directory, where the directory is created
 -- if it does not exist yet, by writing all parts of the index into

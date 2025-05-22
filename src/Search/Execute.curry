@@ -19,8 +19,8 @@ import FlatCurry.FlexRigid
 
 import Index.Helper        ( toLowerS )
 import Index.Indexer
-import Index.IndexTrie
-import Index.IndexItem
+import Index.Trie
+import Index.Item
 import Index.Signature hiding (Function, Type)
 import Search.Query
 import Settings
@@ -123,9 +123,9 @@ filterModuleResults items results =
   filterWithKey (\pos _ -> isModuleItem (Data.Map.lookup pos items)) results
  where
   isModuleItem Nothing                 = False -- should not occur
-  isModuleItem (Just (ModuleItem _))   = True
-  isModuleItem (Just (FunctionItem _)) = False
-  isModuleItem (Just (TypeItem _))     = False
+  isModuleItem (Just (ModuleItem _ _ _ _))         = True
+  isModuleItem (Just (FunctionItem _ _ _ _ _ _ _)) = False
+  isModuleItem (Just (TypeItem _ _ _ _ _ _))       = False
 
 -- Searches for a String in a Trie, and returns a map with the result Map.
 -- The key of the map is the position of the found element in the IndexItem list

@@ -10,7 +10,7 @@ module Interactive ( searchInteractive )
   where
 
 import Index.Indexer
-import Index.IndexItem
+import Index.Item
 import Search.Query
 import Search.Execute
 
@@ -35,11 +35,11 @@ mainLoop index = do
   line = take 60 (repeat '-')
 
 prettyResult :: (IndexItem,Int) -> String
-prettyResult (TypeItem (TypeIndex name mn pkg _ _ _ _),score) =
+prettyResult (TypeItem name mn pkg _ _ _, score) =
   "Type " ++ name ++ " (module " ++ mn ++ ", package " ++ pkg ++ eScore score
-prettyResult (FunctionItem (FunctionIndex name mn pkg _ _ _ _ _),score) =
+prettyResult (FunctionItem name mn pkg _ _ _ _, score) =
   name ++ " (module " ++ mn ++ ", package " ++ pkg ++ eScore score
-prettyResult (ModuleItem (ModuleIndex name _ pkg _ _), score) =
+prettyResult (ModuleItem name _ pkg _, score) =
   "Module " ++ name ++ " (package " ++ pkg ++ eScore score
 
 eScore :: Int -> String

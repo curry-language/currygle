@@ -16,7 +16,7 @@ import FlatCurry.Types
 
 import Index.Helper           ( strip )
 import Index.Indexer
-import Index.IndexItem
+import Index.Item
 import Index.Signature
 import Search.SignatureParser
 

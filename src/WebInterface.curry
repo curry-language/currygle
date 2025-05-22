@@ -20,7 +20,7 @@ import System.IOExts    ( evalCmd )
 import System.Process   ( system )
 import Text.Markdown    ( markdownText2HTML )
 
-import Index.IndexItem
+import Index.Item
 import Index.Indexer
 import Index.Signature
 import PackageConfig      ( packageVersion )
@@ -149,26 +149,28 @@ searchResults2HTML showscore items = do
    where srcurl = docUrl2SourceCodeUrl docurl
 
   itemToHtml :: (IndexItem,Int) -> IO [[BaseHtml]]
-  itemToHtml (ModuleItem (ModuleIndex name author pack link des),score) =
-    return $ addLink link [] $
+  itemToHtml (ModuleItem name author pack des, score) = do
+    let docurl = moduleDocumentationUrl pack name
+    return $ addLink docurl [] $
       [itemHeader ("module " ++ name) score,
        htxt "author: ", bold [htxt author], breakline,
        htxt "package: ", bold [htxt pack], breakline] ++ ppDesc des
-  itemToHtml (FunctionItem
-                (FunctionIndex name modName pack sig _ _ link des),score) = do
+  itemToHtml (FunctionItem name modName pack sig _ _ des, score) = do
     let cifname = operationAnalysisFile pack modName name
     ciexists <- if null cifname then return False else doesFileExist cifname
     let sname = if null name || isAlpha (head name)
                   then name
                   else "(" ++ name ++ ")"
-    return $ addLink link
+        docurl = entityDocumentationUrl pack modName name
+    return $ addLink docurl
             (if ciexists then function2CurryInfoRef pack modName name else []) $
       [itemHeader (sname ++ " :: " ++ prettySigs sig) score,
        htxt "defined in module: ", bold [htxt modName], breakline,
        htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des
-  itemToHtml (TypeItem (TypeIndex name modName pack isClass cs link des),score) =
-    return $ addLink link [] $
-      [itemHeader (if isClass then "class " ++ name else "data " ++ ppType)
+  itemToHtml (TypeItem name modName pack isclass cs des, score) = do
+    let docurl = entityDocumentationUrl pack modName name
+    return $ addLink docurl [] $
+      [itemHeader (if isclass then "class " ++ name else "data " ++ ppType)
                   score,
        htxt "defined in module: ", bold [htxt modName], breakline,
        htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des

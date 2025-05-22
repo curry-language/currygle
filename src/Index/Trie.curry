@@ -8,7 +8,7 @@
 ----------------------------------------------------------------------
 {-# OPTIONS_FRONTEND -Wno-incomplete-patterns -Wno-unused-bindings #-}
 
-module Index.IndexTrie
+module Index.Trie
   ( Trie(..), emptyTrie, addIndexItemsToTrie, createSignatureTrie )
  where
 
@@ -18,7 +18,7 @@ import FlatCurry.FlexRigid
 import RW.Base
 
 import Index.Helper
-import Index.IndexItem
+import Index.Item
 import Index.Signature
 
 ------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ createSignatureTrie items = createSignatureTrieRec items
  where
   createSignatureTrieRec :: [(Int,IndexItem)] -> Trie Signature (Int, Int)
   createSignatureTrieRec []         = emptyTrie
-  createSignatureTrieRec ((n,i):is) = case getSignatures i of
+  createSignatureTrieRec ((n,i):is) = case signatruesOfItem i of
     Nothing   -> createSignatureTrieRec is
     Just sigs -> addAllSignatures (createSignatureTrieRec is) sigs n
 

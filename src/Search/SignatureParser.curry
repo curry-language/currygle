@@ -162,9 +162,9 @@ parseType :: String -> Maybe Signature
 parseType str = let (next, left) = getNextElement str [] 0 0 in
                     if null next then
                         Nothing
-                    else if isNothing (getSignaturesForType left) then
+                    else if isNothing (signatruesOfItemForType left) then
                         Nothing
-                    else let Just sigs = getSignaturesForType left in
+                    else let Just sigs = signatruesOfItemForType left in
                         if Type next sigs == Type "String" [] then
                             Just (Type "[]" [Type "Char" []])
                         else
@@ -188,9 +188,9 @@ parseType str = let (next, left) = getNextElement str [] 0 0 in
                                         | c == '['  = getNextElement cs (acc++[c]) p (b+1)
                                         | c == ']'  = getNextElement cs (acc++[c]) p (b-1)
                                         | otherwise = getNextElement cs (acc++[c]) p b
-        getSignaturesForType :: String -> Maybe [Signature]
-        getSignaturesForType []     = Just []
-        getSignaturesForType (c:cs) =   if null (trimf (c:cs)) then
+        signatruesOfItemForType :: String -> Maybe [Signature]
+        signatruesOfItemForType []     = Just []
+        signatruesOfItemForType (c:cs) =   if null (trimf (c:cs)) then
                                             Just []
                                         else let (next, left) = getNextElement (c:cs) [] 0 0 in
                                             if null (trimf (c:cs)) then
@@ -198,9 +198,9 @@ parseType str = let (next, left) = getNextElement str [] 0 0 in
                                             else if isNothing (parseSignature next) then
                                                 Nothing
                                             else let Just sig = parseSignature next in
-                                                if isNothing (getSignaturesForType left) then
+                                                if isNothing (signatruesOfItemForType left) then
                                                     Nothing
-                                                else let Just sigs = getSignaturesForType left in
+                                                else let Just sigs = signatruesOfItemForType left in
                                                     Just (sigs ++ [sig])
                                     
 -- Parses a single lowercase letter into a Var type Signature.
