@@ -9,8 +9,9 @@
 module Settings
   where
 
-import Data.List ( isPrefixOf, split )
-import System.FilePath ( (</>), splitExtension )
+import Data.List                ( isPrefixOf, split )
+import Language.Curry.Resources ( curryPackagesDocURL )
+import System.FilePath          ( (</>), splitExtension )
 
 import PackageConfig ( packageVersion )
 
@@ -78,14 +79,10 @@ serverSocket = 12354
 ------------------------------------------------------------------------------
 -- Some URLs to which Currygle refers.
 
---- The base URL of the online documentation of Curry packages.
-baseUrlForDocumentation :: String
-baseUrlForDocumentation = "https://cpm.curry-lang.org/DOC/"
-
 --- Returns the URL of the online documentation for a package and module name.
 moduleDocumentationUrl :: String -> String -> String
 moduleDocumentationUrl packageid modname =
-  baseUrlForDocumentation ++ "/" ++ packageid ++ "/" ++ modname ++ ".html"
+  curryPackagesDocURL ++ "/" ++ packageid ++ "/" ++ modname ++ ".html"
 
 --- Returns the URL of the online documentation for a package version, module,
 --- and entity name.

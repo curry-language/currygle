@@ -82,7 +82,7 @@ endif
 .PHONY: restart
 restart:
 	$(MAKE) --ignore-errors stop
-	sleep 2 # to avoid busy port
+	sleep 4 # to avoid busy port
 	$(MAKE) start
 
 # show status of search server
