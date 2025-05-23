@@ -5,7 +5,7 @@
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
 ----------------------------------------------------------------------
-{-# OPTIONS_FRONTEND -Wno-incomplete-patterns -Wno-unused-bindings #-}
+{-# OPTIONS_FRONTEND -Wno-incomplete-patterns #-}
 
 module Index.Item
   ( IndexItem(..)
@@ -197,20 +197,20 @@ signatruesOfItem (TypeItem     _ _ _ _ constr _) = Just (map snd constr)
 ------------------------------------------------------------------------------
 
 instance ReadWrite FlexRigidResult where
-  readRW strs ('0' : r0) = (UnknownFR,r0)
-  readRW strs ('1' : r0) = (ConflictFR,r0)
-  readRW strs ('2' : r0) = (KnownFlex,r0)
-  readRW strs ('3' : r0) = (KnownRigid,r0)
+  readRW _ ('0' : r0) = (UnknownFR,r0)
+  readRW _ ('1' : r0) = (ConflictFR,r0)
+  readRW _ ('2' : r0) = (KnownFlex,r0)
+  readRW _ ('3' : r0) = (KnownRigid,r0)
 
-  showRW params strs0 UnknownFR = (strs0,showChar '0')
-  showRW params strs0 ConflictFR = (strs0,showChar '1')
-  showRW params strs0 KnownFlex = (strs0,showChar '2')
-  showRW params strs0 KnownRigid = (strs0,showChar '3')
+  showRW _ strs0 UnknownFR = (strs0,showChar '0')
+  showRW _ strs0 ConflictFR = (strs0,showChar '1')
+  showRW _ strs0 KnownFlex = (strs0,showChar '2')
+  showRW _ strs0 KnownRigid = (strs0,showChar '3')
 
-  writeRW params h UnknownFR strs = hPutChar h '0' >> return strs
-  writeRW params h ConflictFR strs = hPutChar h '1' >> return strs
-  writeRW params h KnownFlex strs = hPutChar h '2' >> return strs
-  writeRW params h KnownRigid strs = hPutChar h '3' >> return strs
+  writeRW _ h UnknownFR strs = hPutChar h '0' >> return strs
+  writeRW _ h ConflictFR strs = hPutChar h '1' >> return strs
+  writeRW _ h KnownFlex strs = hPutChar h '2' >> return strs
+  writeRW _ h KnownRigid strs = hPutChar h '3' >> return strs
 
   typeOf _ = monoRWType "FlexRigidResult"
 

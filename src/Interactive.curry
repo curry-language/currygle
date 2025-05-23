@@ -11,14 +11,15 @@ module Interactive ( searchInteractive )
 
 import Index.Indexer
 import Index.Item
+import Options
 import Search.Query
 import Search.Execute
 
 -- Execute interactive search w.r.t. a directory containing the index.
-searchInteractive :: FilePath -> IO ()
-searchInteractive indexFolder =
-    do  index <- readIndex indexFolder
-        mainLoop index
+searchInteractive :: Options -> FilePath -> IO ()
+searchInteractive opts indexFolder = do
+  printWhenStatus opts "Please wait for reading Currygle index files..."
+  readIndexStrict opts indexFolder >>= mainLoop
 
 mainLoop :: Index -> IO ()
 mainLoop index = do

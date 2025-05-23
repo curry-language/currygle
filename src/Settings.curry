@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --- This module contains the settings of Currygle2, such as global constants,
---- like paths to files and directories, and URLs to which Currygle referes.
+--- like paths to files and directories, and URLs to which Currygle refers.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
@@ -12,12 +12,23 @@ module Settings
 import Data.List ( isPrefixOf, split )
 import System.FilePath ( (</>), splitExtension )
 
+import PackageConfig ( packageVersion )
+
 ------------------------------------------------------------------------------
 -- Some constants.
 
+--- The banner of Currygle.
+currygleBanner :: String
+currygleBanner = unlines [bannerLine, bannerText, bannerLine]
+ where
+  bannerText = "Currygle (Version " ++ packageVersion ++ " of " ++
+               currygleDate ++ ")"
+  bannerLine = take (length bannerText) (repeat '=')
+
+
 --- The version date of Currygle.
 currygleDate :: String
-currygleDate = "22/05/25"
+currygleDate = "23/05/25"
 
 --- The maximum amount of results returned by a search.
 maxSearchResults :: Int

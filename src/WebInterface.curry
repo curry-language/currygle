@@ -24,6 +24,7 @@ import Index.Item
 import Index.Indexer
 import Index.Signature
 import PackageConfig      ( packageVersion )
+import Options
 import Settings
 import Search.Execute
 import Search.Query
@@ -83,7 +84,7 @@ getResultPage withserver showall searchtxt
   resultFromIndex query = do
     index <- readIndex indexDirPath
     getItemspage query " (slow search since server not reachable)"
-                        (currygleSearch index query) 0
+                       (currygleSearch index query) 0
 
   getItemspage query note items etime = do
     htmlresults <- searchResults2HTML showall $ take maxresults items

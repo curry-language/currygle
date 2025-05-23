@@ -31,8 +31,7 @@ startServer opts = do
   printWhenStatus opts $ "Starting server on socket " ++ show snr
   socket <- listenOn snr
   printWhenStatus opts $ "Server listening on socket " ++ show snr
-  index <- readIndex indexDirPath
-  serverLoop opts socket $!! index
+  readIndexStrict opts indexDirPath >>= serverLoop opts socket
 
 -- This action is the main server loop.
 serverLoop :: Options -> Socket -> Index -> IO ()

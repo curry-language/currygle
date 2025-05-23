@@ -6,7 +6,7 @@
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
 ----------------------------------------------------------------------
-{-# OPTIONS_FRONTEND -Wno-incomplete-patterns -Wno-unused-bindings #-}
+{-# OPTIONS_FRONTEND -Wno-incomplete-patterns #-}
 
 module Index.Trie
   ( Trie(..), emptyTrie, addIndexItemsToTrie, createSignatureTrie )
@@ -55,7 +55,7 @@ createSignatureTrie items = createSignatureTrieRec items
     Nothing   -> createSignatureTrieRec is
     Just sigs -> addAllSignatures (createSignatureTrieRec is) sigs n
 
-  addAllSignatures t []     i = t
+  addAllSignatures t []     _ = t
   addAllSignatures t (s:ss) i = addAllSignatures
                                   (addItemToTrie t s (i, length s)) ss i
 

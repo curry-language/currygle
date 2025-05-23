@@ -15,20 +15,12 @@ import System.Process     ( exitWith )
 import Interactive   ( searchInteractive )
 import Index.Indexer ( createIndexFromDir, writeIndex )
 import Options
-import PackageConfig ( packageVersion )
 import Server        ( startServer, stopServer )
 import Settings      ( indexDirPath, currygleDate )
 
-banner :: String
-banner = unlines [bannerLine, bannerText, bannerLine]
- where
-  bannerText = "Currygle (Version " ++ packageVersion ++ " of " ++
-               currygleDate ++ ")"
-  bannerLine = take (length bannerText) (repeat '=')
-
 main :: IO ()
 main = do
-  (opts,args) <- getArgs >>= processOptions banner
+  (opts,args) <- getArgs >>= processOptions
   unless (null args) $ do
     putStrLn $ "Superfluous arguments: " ++ unwords args
     exitWith 1
@@ -38,13 +30,13 @@ main = do
     when (null docdir) $ putStrLn "Option '--docdir' missing!" >> exitWith 1
     printWhenStatus opts $ "Creating index from files in '" ++ docdir ++ "'..."
     index <- createIndexFromDir docdir
-    writeIndex index indexdir
+    writeIndex opts indexdir index
     printWhenStatus opts $ "Index created and stored in '" ++ indexdir ++ "'."
     exitWith 0
   when (optStartServer opts) $ startServer opts >> exitWith 0
   when (optStopServer opts)  $ stopServer  opts >> exitWith 0
   when (optInteractive opts) $ do
-    printWhenStatus opts "Running query search in interactive mode:"
-    searchInteractive indexdir
+    printWhenStatus opts "Running query search in interactive mode..."
+    searchInteractive opts indexdir
     exitWith 0
-  putStrLn "No execution mode specified. Use '--help' for usage information."
+  printUsage

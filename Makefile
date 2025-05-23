@@ -14,7 +14,7 @@ CURRYOPTIONS=:set -time
 
 # Target directory where the compiled cgi programs, style sheets, etc
 # should be stored, e.g.: $(HOME)/public_html
-WEBDIR = $(HOME)/public_html/currygle2
+WEBDIR = $(HOME)/public_html/currygle
 
 # Executable of the Curry Package Manager to instal the webapp:
 CPM := $(CURRYBIN)/cypm

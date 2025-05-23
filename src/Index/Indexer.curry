@@ -7,21 +7,22 @@
 ----------------------------------------------------------------------
 
 module Index.Indexer
-  ( Index(..), createIndexFromDir, writeIndex, readIndex )
+  ( Index(..), createIndexFromDir, writeIndex, readIndex, readIndexStrict )
  where
 
 import Data.Map
 import FlatCurry.FlexRigid
 import FlatCurry.Types
-import RW.Base
-import System.Directory
-import System.FilePath  ( (</>) )
+import RW.Base              ( readDataFile, writeDataFile )
+import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist )
+import System.FilePath      ( (</>) )
 
 import Crawler.Crawler
 import Crawler.Readers
 import Index.Trie
 import Index.Item
 import Index.Signature
+import Options
 import Settings
 
 -- The Currygle index consists of a lookup table of all items in the index
@@ -110,44 +111,70 @@ createIndexFromDir cdocdir = do
 
 -- Stores an index in a directory, where the directory is created
 -- if it does not exist yet, by writing all parts of the index into
--- seperate files.
-writeIndex :: Index -> String -> IO ()
-writeIndex (Index items descrs mods packs funcs types classes
-                  authors det flex sigs) path = do
-  createDirectoryIfMissing True path
-  exists <- doesDirectoryExist (path)
-  if not exists then createDirectory (path) else pure ()
-  writeFile (path </> indexItemFileName)     (showData items)
-  writeFile (path </> descrTrieFileName)     (showData descrs)
-  writeFile (path </> moduleTrieFileName)    (showData mods)
-  writeFile (path </> packageTrieFileName)   (showData packs)
-  writeFile (path </> functionTrieFileName)  (showData funcs)
-  writeFile (path </> typeTrieFileName)      (showData types)
-  writeFile (path </> classTrieFileName)     (showData classes)
-  writeFile (path </> authorTrieFileName)    (showData authors)
-  writeFile (path </> detMapFileName)        (showData det)
-  writeFile (path </> flexMapFileName)       (showData flex)
-  writeFile (path </> signatureTrieFileName) (showData sigs)
+-- separate files.
+writeIndex :: Options -> FilePath -> Index -> IO ()
+writeIndex opts indexpath
+  (Index items descrs mods packs funcs types classes authors det flex sigs) = do
+  createDirectoryIfMissing True indexpath
+  writeIndexFile indexItemFileName     items
+  writeIndexFile descrTrieFileName     descrs
+  writeIndexFile moduleTrieFileName    mods
+  writeIndexFile packageTrieFileName   packs
+  writeIndexFile functionTrieFileName  funcs
+  writeIndexFile typeTrieFileName      types
+  writeIndexFile classTrieFileName     classes
+  writeIndexFile authorTrieFileName    authors
+  writeIndexFile detMapFileName        det
+  writeIndexFile flexMapFileName       flex
+  writeIndexFile signatureTrieFileName sigs
   putStrLn $ "Index with " ++ show (size items) ++ " items written."
-
--- Gets the path to an index directory as a string, and returns the stored index
-readIndex :: String -> IO Index
-readIndex indexPath = do
-  items  <- fmap mbEmptyMap $ readDataFile (indexPath </> indexItemFileName)
-  descrs <- fmap mbEmptyTrie $ readDataFile (indexPath </> descrTrieFileName)
-  mods   <- fmap mbEmptyTrie $ readDataFile (indexPath </> moduleTrieFileName)
-  packs  <- fmap mbEmptyTrie $ readDataFile (indexPath </> packageTrieFileName)
-  funcs  <- fmap mbEmptyTrie $ readDataFile (indexPath </> functionTrieFileName)
-  types  <- fmap mbEmptyTrie $ readDataFile (indexPath </> typeTrieFileName)
-  classes <- fmap mbEmptyTrie $ readDataFile (indexPath </> classTrieFileName)
-  authors <- fmap mbEmptyTrie $ readDataFile (indexPath </> authorTrieFileName)
-  det  <- fmap mbEmptyMap $ readDataFile (indexPath </> detMapFileName)
-  flex <- fmap mbEmptyMap $ readDataFile (indexPath </> flexMapFileName)
-  sigs <- fmap mbEmptyTrie $ readDataFile (indexPath </> signatureTrieFileName)
-  return $ Index items descrs mods packs funcs types classes
-                  authors det flex sigs
  where
+  writeIndexFile fn d = do
+    printWhenStatus opts $ "Writing index file '" ++ fn ++ "''..."
+    writeDataFile (indexpath </> fn) d
+
+-- Reads the Currygle index from the argument directory.
+readIndex :: String -> IO Index
+readIndex indexpath = do
+  items   <- fmap mbEmptyMap  $ readIndexFile indexItemFileName
+  descrs  <- fmap mbEmptyTrie $ readIndexFile descrTrieFileName
+  mods    <- fmap mbEmptyTrie $ readIndexFile moduleTrieFileName
+  packs   <- fmap mbEmptyTrie $ readIndexFile packageTrieFileName
+  funcs   <- fmap mbEmptyTrie $ readIndexFile functionTrieFileName
+  types   <- fmap mbEmptyTrie $ readIndexFile typeTrieFileName
+  classes <- fmap mbEmptyTrie $ readIndexFile classTrieFileName
+  authors <- fmap mbEmptyTrie $ readIndexFile authorTrieFileName
+  det     <- fmap mbEmptyMap  $ readIndexFile detMapFileName
+  flex    <- fmap mbEmptyMap  $ readIndexFile flexMapFileName
+  sigs    <- fmap mbEmptyTrie $ readIndexFile signatureTrieFileName
+  return $ Index items descrs mods packs funcs types classes authors det flex
+                 sigs
+ where
+  readIndexFile fn = readDataFile (indexpath </> fn)
+
   mbEmptyMap  mb = maybe Data.Map.empty id mb
   mbEmptyTrie mb = maybe emptyTrie id mb
+
+-- Strictly reads the Currygle index from the argument directory.
+readIndexStrict :: Options -> String -> IO Index
+readIndexStrict opts indexpath = do
+  (Index items0 descs0 mods0 pkgs0 funs0 typs0 cls0 auths0 det0 flex0 sigs0)
+    <- readIndex indexpath
+  items <- strictReadItems "item"        items0
+  descs <- strictReadItems "description" descs0
+  mods  <- strictReadItems "module"      mods0
+  pkgs  <- strictReadItems "package"     pkgs0
+  funs  <- strictReadItems "function"    funs0
+  typs  <- strictReadItems "type"        typs0
+  cls   <- strictReadItems "classe"      cls0
+  auths <- strictReadItems "author"      auths0
+  sigs  <- strictReadItems "signature"   sigs0
+  det   <- strictReadItems "determinism" det0
+  flex  <- strictReadItems "flexible"    flex0
+  return (Index items descs mods pkgs funs typs cls auths det flex sigs)
+ where
+  strictReadItems descitems items = do
+    printWhenStatus opts $ "Reading " ++ descitems ++ " index..."
+    return $!! items
 
 ------------------------------------------------------------------------------

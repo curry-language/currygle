@@ -6,8 +6,7 @@
 -------------------------------------------------------------------------
 
 module Options
-  ( Options(..), defaultOptions
-  , processOptions, usageText
+  ( Options(..), defaultOptions, processOptions, printUsage
   , printWhenStatus, printWhenIntermediate, printWhenAll, printMessage
   )
  where
@@ -15,11 +14,11 @@ module Options
 import Control.Monad         ( when, unless )
 import Numeric               ( readNat )
 import System.Console.GetOpt
-import System.IO             ( hFlush, stdout )
+import System.IO             ( hFlush, hPutStrLn, stderr )
 
 import System.Process        ( exitWith )
 
-import Settings              ( indexDirPath )
+import Settings              ( currygleBanner, indexDirPath )
 
 -- The options of the Currgle indexer.
 data Options = Options
@@ -39,16 +38,17 @@ defaultOptions = Options 1 False "" False False False False
 
 --- Process the actual command line arguments and return the options
 --- and the name of the main program.
-processOptions :: String -> [String] -> IO (Options,[String])
-processOptions banner argv = do
+processOptions :: [String] -> IO (Options,[String])
+processOptions argv = do
   let (funopts, args, opterrors) = getOpt Permute options argv
       opts = foldl (flip id) defaultOptions funopts
   unless (null opterrors)
          (putStr (unlines opterrors) >> printUsage >> exitWith 1)
   when (optHelp opts) (printUsage >> exitWith 0)
   return (opts, args)
- where
-  printUsage = putStrLn (banner ++ "\n" ++ usageText)
+
+printUsage :: IO ()
+printUsage = putStrLn (currygleBanner ++ "\n" ++ usageText)
 
 -- Help text
 usageText :: String
@@ -74,7 +74,7 @@ options =
   , Option "" ["interactive"]
            (NoArg (\opts -> opts { optInteractive = True }))
            ("start Currygle in interactive search mode")
-  , Option "s" ["server"]
+  , Option "" ["server"]
            (NoArg (\opts -> opts { optStartServer = True }))
            "start Currygle server mode"
   , Option "" ["stop"]
@@ -92,18 +92,21 @@ options =
 
 -------------------------------------------------------------------------
 
+-- Print status information on stderr.
 printWhenStatus :: Options -> String -> IO ()
 printWhenStatus opts s = when (optVerb opts > 0) (printMessage s)
 
+-- Print intermediate information on stderr.
 printWhenIntermediate :: Options -> String -> IO ()
 printWhenIntermediate opts s =
   when (optVerb opts > 1) (printMessage s)
 
+-- Print information about all details on stderr.
 printWhenAll :: Options -> String -> IO ()
 printWhenAll opts s =
  when (optVerb opts > 2) (printMessage s)
 
 printMessage :: String -> IO ()
-printMessage s = putStrLn s >> hFlush stdout
+printMessage s = hPutStrLn stderr s >> hFlush stderr
 
 ---------------------------------------------------------------------------

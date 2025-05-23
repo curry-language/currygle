@@ -1,5 +1,6 @@
 -----------------------------------------------------------------------
---- This module defines a `ReadWrite` instance of type `Map`.
+--- This module defines a `ReadWrite` instance of type `Map` and
+--- a few helper operations.
 ---
 --- @author Michael Hanus
 --- @version May 2025
