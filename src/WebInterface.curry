@@ -8,7 +8,7 @@
 module WebInterface --( main, searchForm )
  where
 
-import Data.List      ( init, intercalate, last, split )
+import Data.List      ( init, intercalate, isPrefixOf, last, split )
 import System.IO
 
 import HTML.Base
@@ -20,6 +20,7 @@ import System.IOExts    ( evalCmd )
 import System.Process   ( system )
 import Text.Markdown    ( markdownText2HTML )
 
+import Index.Helper       ( strip )
 import Index.Item
 import Index.Indexer
 import Index.Signature
@@ -65,33 +66,40 @@ getResultPage withserver showall searchtxt
   | all isSpace searchtxt -- no query terms present
   = return defaultPage
   | otherwise
-  = case parseSearchText searchtxt of
-      Nothing  -> return defaultPage
-      Just query ->
-        if withserver
-          then do
-            mbres <- catch (profilingSearchClient searchtxt >>= return . Just)
-                           (\_ -> return Nothing)
-            case mbres of
-              Nothing  -> do -- try to restart server:
-                             system "make restart >> SERVER.LOG"
-                             resultFromIndex query
-              Just res -> case reads res of
-                      [((items,et),_)] -> getItemspage query "" items et
-                      _                -> return defaultPage
-          else resultFromIndex query
- where
-  resultFromIndex query = do
-    index <- readIndex indexDirPath
-    getItemspage query " (slow search since server not reachable)"
-                       (currygleSearch index query) 0
+  = do let (fuzzy,squery) = if ":fuzzy" `isPrefixOf` searchtxt
+                              then (True, strip (drop 6 searchtxt))
+                              else (False,searchtxt)
 
-  getItemspage query note items etime = do
+       case parseSearchText squery of
+          Nothing  -> return defaultPage
+          Just query ->
+            if withserver
+              then do
+                mbres <- catch
+                          (profilingSearchClient fuzzy squery >>= return . Just)
+                          (\_ -> return Nothing)
+                case mbres of
+                  Nothing  -> do -- try to restart server:
+                                system "make restart >> SERVER.LOG"
+                                resultFromIndex fuzzy query
+                  Just res -> case reads res of
+                    [((items,et),_)] -> getItemspage fuzzy query "" items et
+                    _                -> return defaultPage
+              else resultFromIndex fuzzy query
+ where
+  resultFromIndex fuzzy query = do
+    index <- readIndex indexDirPath
+    getItemspage fuzzy query " (slow search since server not reachable)"
+                 (currygleSearch fuzzy index query) 0
+
+  getItemspage fuzzy query note items etime = do
     htmlresults <- searchResults2HTML showall $ take maxresults items
     return $ curryglePage $
       [ par $
           [ italic [htxt $ "Search results for "]
-          , kbdInput [htxt (prettySearchQuery query)], htxt $ note ++ ": "
+          , kbdInput [htxt $ if fuzzy then ":fuzzy " else "",
+                      htxt (prettySearchQuery query)]
+          , htxt $ note ++ ": "
           , htxt $ "found "
           , htxt $ case num of 0 -> "no entity"
                                1 -> "one entity"
@@ -219,7 +227,11 @@ currygleDescription =
         , htxt "expressions." ]
   , par [ htxt "The option keywords can be abbreviated where the abbreviation "
         , htxt "should be unique. If an abbreviation is not unique, "
-        , htxt "the first possibility according to this table is taken." ]
+        , htxt "the first possibility according to this table is taken. "
+        , htxt "If the entire query is prefixed by "
+        , kbdInput [htxt ":fuzzy"], htxt ", a fuzzy text search is used "
+        , htxt "to find more results without exact matches."
+        ]
   , par [ htxt "Example: the following queries show all non-deterministic "
         , htxt "operations defined in the standard prelude:", breakline
         , kbdInput [htxt ":inmodule Prelude AND :nondeteterministic"], htxt " "

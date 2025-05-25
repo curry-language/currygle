@@ -63,18 +63,18 @@ serverLoopOnHandle opts socket index handle = do
       case break (==' ') request of
         ("STOP","") -> hClose handle >> printWhenStatus opts "Server stopped"
         ("PING","") -> sendResult "ALIVE!"
-        ("QUERY",' ':query) -> do let answer = case parseSearchText query of
-                                                 Nothing -> "Parse error"
-                                                 Just q  ->
-                                                   show (currygleSearch index q)
-                                  sendResult answer
-        ("TIME",' ':query) -> do
-           answer <- case parseSearchText query of
-                       Nothing -> return "Parse error"
-                       Just q  -> fmap show $ profilingCurrygleSearch index q
-           sendResult answer
+        ("QUERY", ' ':q) -> searchSend (\i -> return . currygleSearch False i) q
+        ("FQUERY",' ':q) -> searchSend (\i -> return . currygleSearch True i) q
+        ("TIME",  ' ':q) -> searchSend (profilingCurrygleSearch False) q
+        ("FTIME", ' ':q) -> searchSend (profilingCurrygleSearch True) q
         _ -> printMessage $ "ILLEGAL MESSAGE RECEIVED: " ++ request
  where
+  searchSend searchop query = do
+    answer <- case parseSearchText query of
+                 Nothing -> return "Parse error"
+                 Just q  -> fmap show (searchop index q)
+    sendResult answer
+
   sendResult resultstring = do
     printWhenAll opts $ "Result:\n" ++ resultstring
     hPutStrLn handle resultstring
@@ -114,12 +114,13 @@ pingServer = catch ping (\_ -> return False)
     hClose h
     return True
 
---- Currygle search by using the server. Returns the string representation
---- of the results.
-searchClient :: String -> IO String
-searchClient request = do
+--- Currygle search by using the server.
+--- Returns the string representation of the results.
+--- If the first argument is `True`, fuzzy search is used.
+searchClient :: Bool -> String -> IO String
+searchClient fuzzy request = do
   h <- connectToSocket "localhost" serverSocket
-  hPutStrLn h ("QUERY " ++ request)
+  hPutStrLn h ((if fuzzy then "FQUERY " else "QUERY ") ++ request)
   hFlush h
   answer <- hGetLine h
   --putStrLn $ "Answer: " ++ answer
@@ -128,10 +129,11 @@ searchClient request = do
 
 --- Currygle search with profiling by using the server. Return the string
 --- representation of the pair of items and the elapsed time.
-profilingSearchClient :: String -> IO String
-profilingSearchClient request = do
+--- If the first argument is `True`, fuzzy search is used.
+profilingSearchClient :: Bool -> String -> IO String
+profilingSearchClient fuzzy request = do
   h <- connectToSocket "localhost" serverSocket
-  hPutStrLn h ("TIME " ++ request)
+  hPutStrLn h ((if fuzzy then "FTIME " else "TIME ") ++ request)
   hFlush h
   answer <- hGetLine h
   --putStrLn $ "Answer: " ++ answer

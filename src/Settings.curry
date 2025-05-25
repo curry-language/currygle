@@ -29,7 +29,7 @@ currygleBanner = unlines [bannerLine, bannerText, bannerLine]
 
 --- The version date of Currygle.
 currygleDate :: String
-currygleDate = "23/05/25"
+currygleDate = "25/05/25"
 
 --- The maximum amount of results returned by a search.
 maxSearchResults :: Int
