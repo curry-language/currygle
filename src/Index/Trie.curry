@@ -47,13 +47,13 @@ addToTrie (Node m vs) (k:ks) v
 -- Creates a trie storing the signature for all TypeIndex and FunctionIndex
 -- in the list
 createSignatureTrie :: [(Int,IndexItem)] -> Trie Signature (Int,Int)
-createSignatureTrie items = createSignatureTrieRec items
+createSignatureTrie items = createSignatureTrieFor items
  where
-  createSignatureTrieRec :: [(Int,IndexItem)] -> Trie Signature (Int, Int)
-  createSignatureTrieRec []         = emptyTrie
-  createSignatureTrieRec ((n,i):is) = case signatruesOfItem i of
-    Nothing   -> createSignatureTrieRec is
-    Just sigs -> addAllSignatures (createSignatureTrieRec is) sigs n
+  createSignatureTrieFor :: [(Int,IndexItem)] -> Trie Signature (Int, Int)
+  createSignatureTrieFor []         = emptyTrie
+  createSignatureTrieFor ((n,i):is) = case signatruesOfItem i of
+    Nothing   -> createSignatureTrieFor is
+    Just sigs -> addAllSignatures (createSignatureTrieFor is) sigs n
 
   addAllSignatures t []     _ = t
   addAllSignatures t (s:ss) i = addAllSignatures
@@ -78,10 +78,10 @@ addIndexItemsToTrie f = addIndexItems emptyTrie
 -- Adds the item (third argument) into the given trie under all sublists
 -- of the key (second argument) including the empty one.
 addItemToTrie :: Ord k => Trie k v -> [k] -> v -> Trie k v
-addItemToTrie trie str item =
-  foldr (\(key,value) tr -> addToTrie tr key value) trie
+addItemToTrie trie key item =
+  foldr (\(k,val) tr -> addToTrie tr k val) trie
         (map (\ks -> (ks,item))
-             (concatMap allPrefixes (allSuffixes str) ++ [[]]))
+             (concatMap allPrefixes (allSuffixes key) ++ [[]]))
 
 -- Returns all suffixes of a list.
 allSuffixes :: [a] -> [[a]]

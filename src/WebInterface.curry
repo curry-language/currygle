@@ -162,7 +162,7 @@ searchResults2HTML showscore items = do
     let docurl = moduleDocumentationUrl pack name
     return $ addLink docurl [] $
       [itemHeader ("module " ++ name) score,
-       htxt "author: ", bold [htxt author], breakline,
+       htxt "authors: ", bold [htxt author], breakline,
        htxt "package: ", bold [htxt pack], breakline] ++ ppDesc des
   itemToHtml (FunctionItem name modName pack sig _ _ des, score) = do
     let cifname = operationAnalysisFile pack modName name
@@ -199,44 +199,50 @@ searchResults2HTML showscore items = do
 -- The description of Currygle in HTML format.
 currygleDescription :: [BaseHtml]
 currygleDescription =
+  [blockstyle "row justify-content-center"
+    [blockstyle "col-sm-12 col-md-10 col-lg-6" currygleHelpText]]
+
+currygleHelpText :: [BaseHtml]
+currygleHelpText =
   [ h4 [htxt "Options to restrict the search:"]
-  , headedTable (map (\(x,y) -> [[htxt x], [htxt y]])
+  , headedTable (map (\(o,s) -> [[bold [htxt o]], [htxt s]])
       [ ("Option:", "Searches for")
-      , (":module <mname>", "modules containing <mname> in their name")
-      , (":function <fname>"
-        , "functions or data constructors containing <fname> in their name")
-      , (":class <cname>", "classes containing <cname> in their name")
-      , (":type <tname>", "types containing <tname> in their name")
-      , (":inmodule <mname>"
-        , "entities in modules containing <mname> in their name")
-      , (":inpackage <pname>"
-        , "entities in packages containing <pname> in their name")
-      , (":author <name>", "modules whose author contains <name> in their name")
-      , (":signature <signature>"
-        , "functions containing <signature> in their signature, " ++
-          "or types containing a constructor containing <signature>")
-      , (":deterministic", "deterministic operations")
+      , (":function <f>"
+        , "functions or data constructors containing <f> in their name")
+      , (":module <m>", "modules containing <m> in their name")
+      , (":class <c>",     "classes containing <c> in their name")
+      , (":type <t>",      "types containing <t> in their name")
+      , (":inmodule <m>",  "entities of modules containing <m> in their name")
+      , (":inpackage <p>", "entities of packages containing <p> in their name")
+      , (":author <n>",    "modules with an author name containing <n>")
+      , (":signature <s>"
+        , "functions or types with constructors containing <s> in their " ++
+          "signature, e.g., \":signature [a] -> [b]\" or " ++
+          "\":signature a -> String\"")
+      , (":deterministic",    "deterministic operations")
       , (":nondeterministic", "non-deterministic operations")
-      , (":flexible", "flexible operations")
-      , (":rigid", "rigid operations")
+      , (":flexible",         "flexible operations")
+      , (":rigid",            "rigid operations")
       ])
       `addClass` "table table-striped table-sm"
-  , par [ htxt "The keywords  AND, OR, and NOT can be used as binary infix "
+  , par [ htxt "Search terms are not case sensitive. "
+        , htxt "The keywords  AND, OR, and NOT can be used as binary infix "
         , htxt "operators to combine options."
         , htxt "Options can be enclosed in curly braces to allow nested "
         , htxt "expressions." ]
   , par [ htxt "The option keywords can be abbreviated where the abbreviation "
         , htxt "should be unique. If an abbreviation is not unique, "
-        , htxt "the first possibility according to this table is taken. "
-        , htxt "If the entire query is prefixed by "
+        , htxt "the first possibility according to this table is taken. "]
+  , par [ italic [htxt "Example:"]
+        , htxt " the following queries show all non-deterministic "
+        , htxt "operations defined in the standard prelude:", breakline
+        , kbdInput [htxt ":inmodule Prelude AND :nondeteterministic"], breakline
+        , kbdInput [htxt ":inm Prelude AND :nondet"], breakline
+        , kbdInput [htxt ":i Prelude AND :n"]
+        ]
+  , par [ htxt "If the entire query is prefixed by "
         , kbdInput [htxt ":fuzzy"], htxt ", a fuzzy text search is used "
         , htxt "to find more results without exact matches."
-        ]
-  , par [ htxt "Example: the following queries show all non-deterministic "
-        , htxt "operations defined in the standard prelude:", breakline
-        , kbdInput [htxt ":inmodule Prelude AND :nondeteterministic"], htxt " "
-        , kbdInput [htxt ":inm Prelude AND :nondet"], htxt " "
-        , kbdInput [htxt ":i Prelude AND :n"]
         ]
   ]
 

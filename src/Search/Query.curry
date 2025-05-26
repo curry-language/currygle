@@ -18,7 +18,7 @@ import Index.Helper           ( strip )
 import Index.Indexer
 import Index.Item
 import Index.Signature
-import Search.SignatureParser
+import Search.SignatureParser ( parseSignature )
 
 -- The SearchQuery is a tree which has the SearchTerms as leaves,
 -- and AND, OR or NOT AND as the inner nodes

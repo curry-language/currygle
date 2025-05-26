@@ -10,13 +10,14 @@ import FlatCurry.Types
 import RW.Base
 
 -- There are three types of Sigatures:
--- The Type, for example [Int] or IO a
--- Functions a -> Int
--- and variables, a or b
+-- a `Type`, i.e., a type constructor applied to arguments,
+-- like `[Int]` or `IO a`,
+-- a `Function`, e.g., `[a] -> Int`,
+-- or a variable with some index.
 data Signature = Type String [Signature]
                | Function Signature Signature
                | Var Int
-    deriving (Read, Show)
+  deriving (Read, Show)
 
 instance Eq Signature where
     (Var _) == (Type _ _) = False
@@ -56,17 +57,37 @@ leSigList [] (_:_)              = True
 leSigList (_:_) []              = False
 leSigList (s1:sigs1) (s2:sigs2) = if s1 == s2 then leSigList sigs1 sigs2 else s1 <= s2
 
+--- Normalize a `Signature` expression by enumerating all type variable
+--- from 0 in the order of their occurrences.
+--- Hence, `map` has always type `(a -> b) -> [a] -> [b]` instead of the type
+--- `(b -> a) -> [b] -> [a]` obtained from CurryDoc.
+normalizeSignature :: Signature -> Signature
+normalizeSignature sig = mapVars (zip (reverse (varsInSig [] sig)) [0..]) sig
+ where
+  varsInSig vs (Var i)          = if i `elem` vs then vs else i:vs
+  varsInSig vs (Function t1 t2) = varsInSig (varsInSig vs t1) t2
+  varsInSig vs (Type _ ts)      = foldl varsInSig vs ts
+
+  mapVars mvs (Var i)          =
+    Var (maybe (error "Var not found in normalizeSignature") id (lookup i mvs))
+  mapVars mvs (Function t1 t2) = Function (mapVars mvs t1) (mapVars mvs t2)
+  mapVars mvs (Type tc ts)     = Type tc (map (mapVars mvs) ts)
+
 typeExprToSignature :: TypeExpr -> Signature
-typeExprToSignature (TVar i)            = Var i
-typeExprToSignature (FuncType s1 s2)    = Function (typeExprToSignature s1) (typeExprToSignature s2)
--- We ignore the module name for Constant variable names in our search
-typeExprToSignature (TCons (_,n2) tes) = Type n2 (map typeExprToSignature tes)
-typeExprToSignature (ForallType _ te)   = typeExprToSignature te
+typeExprToSignature = normalizeSignature . typeExp2Sig
+ where
+  typeExp2Sig (TVar i)           = Var i
+  typeExp2Sig (FuncType s1 s2)   = Function (typeExp2Sig s1) (typeExp2Sig s2)
+  -- ignore module name since we do not support qualified names in our search
+  typeExp2Sig (TCons (_,n2) tes) = Type n2 (map typeExp2Sig tes)
+  typeExp2Sig (ForallType _ te)  = typeExp2Sig te
 
 signatureToTypeExpr :: Signature -> TypeExpr
 signatureToTypeExpr (Var i)          = (TVar i)
-signatureToTypeExpr (Function s1 s2) = FuncType (signatureToTypeExpr s1) (signatureToTypeExpr s2)
-signatureToTypeExpr (Type n2 tes)    = TCons ("",n2) (map signatureToTypeExpr tes)
+signatureToTypeExpr (Function s1 s2) =
+  FuncType (signatureToTypeExpr s1) (signatureToTypeExpr s2)
+signatureToTypeExpr (Type n2 tes)    =
+  TCons ("",n2) (map signatureToTypeExpr tes)
 
 -- Does a flat seperation of a signature to a list. So a -> b becomes [a,b],
 -- and (a->b)->b becomes [(a->b), b]

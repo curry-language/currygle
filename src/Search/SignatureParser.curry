@@ -1,5 +1,5 @@
-module Search.SignatureParser (parseSignature)
-    where
+module Search.SignatureParser ( parseSignature )
+ where
 
 import Index.Signature
 
@@ -12,19 +12,20 @@ import FlatCurry.Types hiding (Var, Type)
 -- It could start with ( in case of unit type, tuple or for function
 -- Otherwise a List which starts with [ or a letter
 parseSignature :: String -> Maybe Signature
-parseSignature text =   if isNothing (splitFunctionArguments text) then
-                            Nothing
-                        else let Just args = splitFunctionArguments text in
-                            -- If it is a function, pass all sub-signatures, and make a function out of it
-                            if length args > 1 then
-                                fromList (map parseSignature args)
-                            -- Otherwise differentiate according to the start of the signature
-                            else if head (trimf (head args)) == '(' then
-                                parseParenth (trimf (head args))
-                            else if head (trimf (head args)) == '[' then
-                                parseList (trimf (head args))
-                            else
-                                parseTypeOrVar (trimf (head args))
+parseSignature text = 
+  if isNothing (splitFunctionArguments text) then
+        Nothing
+    else let Just args = splitFunctionArguments text in
+        -- If it is a function, pass all sub-signatures, and make a function out of it
+        if length args > 1 then
+            fromList (map parseSignature args)
+        -- Otherwise differentiate according to the start of the signature
+        else if head (trimf (head args)) == '(' then
+            parseParenth (trimf (head args))
+        else if head (trimf (head args)) == '[' then
+            parseList (trimf (head args))
+        else
+            parseTypeOrVar (trimf (head args))
     where
         -- Parses a String into a type or variable, including lists and tupels
         parseTypeOrVar :: String -> Maybe Signature
@@ -148,14 +149,14 @@ parseTuple n str = if isNothing (parseTupleElements n (drop 1 str)) then
 -- The first parenthesis should be removed beforehand
 getTupleSize :: String -> Int
 getTupleSize str = 1 + getTupleSizeHelp 0 str
-    where
-        getTupleSizeHelp :: Int -> String -> Int
-        getTupleSizeHelp _ []       = 0
-        getTupleSizeHelp p (x:xs)   | p == 1 && x == ',' = 1 + getTupleSizeHelp 0 xs
-                                    | x == '('           = getTupleSizeHelp (p+1) xs
-                                    | p == 1 && x == ')' = 0
-                                    | p >  1 && x == ')' = getTupleSizeHelp (p-1) xs
-                                    | otherwise          = getTupleSizeHelp p xs
+ where
+  getTupleSizeHelp :: Int -> String -> Int
+  getTupleSizeHelp _ []       = 0
+  getTupleSizeHelp p (x:xs)   | p == 1 && x == ',' = 1 + getTupleSizeHelp 0 xs
+                              | x == '('           = getTupleSizeHelp (p+1) xs
+                              | p == 1 && x == ')' = 0
+                              | p >  1 && x == ')' = getTupleSizeHelp (p-1) xs
+                              | otherwise          = getTupleSizeHelp p xs
 
 -- Parses a Type from into a Signature. A type either begins
 parseType :: String -> Maybe Signature
@@ -169,39 +170,39 @@ parseType str = let (next, left) = getNextElement str [] 0 0 in
                             Just (Type "[]" [Type "Char" []])
                         else
                             Just (Type next sigs)
-    where
-        -- Gets the next Element of a type declaration.
-        -- 1. The String to be analysed
-        -- 2. The accumulator
-        -- 3. Counter for parenthesis
-        -- 4. Counter for Brackets
-        getNextElement :: String -> String -> Int -> Int -> (String, String)
-        getNextElement []     acc _ _ = (acc,[])
-        -- Ignore all spaces infront of the next element
-        getNextElement (c:cs) acc p b   | null acc && c == ' ' = getNextElement cs acc p b
-                                        -- A space finishes an element if all parenthesis
-                                        -- and brackets are closed
-                                        | not (null acc) && p == 0 && b == 0 && c == ' ' =
-                                            (acc, cs)
-                                        | c == '('  = getNextElement cs (acc++[c]) (p+1) b
-                                        | c == ')'  = getNextElement cs (acc++[c]) (p-1) b
-                                        | c == '['  = getNextElement cs (acc++[c]) p (b+1)
-                                        | c == ']'  = getNextElement cs (acc++[c]) p (b-1)
-                                        | otherwise = getNextElement cs (acc++[c]) p b
-        signatruesOfItemForType :: String -> Maybe [Signature]
-        signatruesOfItemForType []     = Just []
-        signatruesOfItemForType (c:cs) =   if null (trimf (c:cs)) then
-                                            Just []
-                                        else let (next, left) = getNextElement (c:cs) [] 0 0 in
-                                            if null (trimf (c:cs)) then
-                                                Just []
-                                            else if isNothing (parseSignature next) then
-                                                Nothing
-                                            else let Just sig = parseSignature next in
-                                                if isNothing (signatruesOfItemForType left) then
-                                                    Nothing
-                                                else let Just sigs = signatruesOfItemForType left in
-                                                    Just (sigs ++ [sig])
+ where
+  -- Gets the next Element of a type declaration.
+  -- 1. The String to be analysed
+  -- 2. The accumulator
+  -- 3. Counter for parenthesis
+  -- 4. Counter for Brackets
+  getNextElement :: String -> String -> Int -> Int -> (String, String)
+  getNextElement []     acc _ _ = (acc,[])
+  -- Ignore all spaces infront of the next element
+  getNextElement (c:cs) acc p b   | null acc && c == ' ' = getNextElement cs acc p b
+                                  -- A space finishes an element if all parenthesis
+                                  -- and brackets are closed
+                                  | not (null acc) && p == 0 && b == 0 && c == ' ' =
+                                      (acc, cs)
+                                  | c == '('  = getNextElement cs (acc++[c]) (p+1) b
+                                  | c == ')'  = getNextElement cs (acc++[c]) (p-1) b
+                                  | c == '['  = getNextElement cs (acc++[c]) p (b+1)
+                                  | c == ']'  = getNextElement cs (acc++[c]) p (b-1)
+                                  | otherwise = getNextElement cs (acc++[c]) p b
+  signatruesOfItemForType :: String -> Maybe [Signature]
+  signatruesOfItemForType []     = Just []
+  signatruesOfItemForType (c:cs) =   if null (trimf (c:cs)) then
+                                      Just []
+                                  else let (next, left) = getNextElement (c:cs) [] 0 0 in
+                                      if null (trimf (c:cs)) then
+                                          Just []
+                                      else if isNothing (parseSignature next) then
+                                          Nothing
+                                      else let Just sig = parseSignature next in
+                                          if isNothing (signatruesOfItemForType left) then
+                                              Nothing
+                                          else let Just sigs = signatruesOfItemForType left in
+                                              Just (sigs ++ [sig])
                                     
 -- Parses a single lowercase letter into a Var type Signature.
 parseVar :: String -> Maybe Signature
@@ -217,16 +218,13 @@ parseVar (c:cs) = if null (trimf (c:cs)) then
                     else Nothing
 
 fromList :: [Maybe Signature] -> Maybe Signature
-fromList []     = Nothing
-fromList [x]    =   if (isNothing x) then
-                        Nothing
-                    else
-                        x
-fromList (x:y:xs) = if isNothing x then
-                        Nothing
-                    else let Just x1 = x in
-                        let Just fun = fromList (y:xs) in
-                            Just (Function x1 fun)
+fromList []       = Nothing
+fromList [x]      = if isNothing x then Nothing else x
+fromList (x:y:xs) = if isNothing x
+                      then Nothing
+                      else let Just x1 = x in
+                           let Just fun = fromList (y:xs) in
+                               Just (Function x1 fun)
 
 -- Removes all spaces from the front
 trimf :: String -> String
