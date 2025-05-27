@@ -16,8 +16,8 @@ import FlatCurry.Types
 import System.Directory
 import System.FilePath  ( (</>), isExtensionOf, splitDirectories )
 
-import Crawler.Readers
-import Crawler.ReadersAlternatives
+import Crawler.Types
+import Crawler.AltTypes
 import Settings
 
 -- Searches all CDoc files in the given directory and returns their names
@@ -84,47 +84,46 @@ readCurryInfo text
 
   -- Creates a CurryInfo from an AltCurryInfo by deleting all ForallType TypeExpr
   toCurryInfo :: AltCurryInfo -> CurryInfo
-  toCurryInfo (Crawler.ReadersAlternatives.CurryInfo
+  toCurryInfo (Crawler.AltTypes.CurryInfo
                  altModInfo altFuncInfos altTypeInfos) =
-    Crawler.Readers.CurryInfo
+    Crawler.Types.CurryInfo
         (toModInfo altModInfo)
         (toFuncInfos altFuncInfos)
         (map toTypeInfo altTypeInfos)
   
   toModInfo :: AltModuleInfo -> ModuleInfo
-  toModInfo (Crawler.ReadersAlternatives.ModuleInfo s1 s2 s3) =
-    Crawler.Readers.ModuleInfo s1 s2 s3
+  toModInfo (Crawler.AltTypes.ModuleInfo s1 s2 s3) =
+    Crawler.Types.ModuleInfo s1 s2 s3
 
   toFuncInfos :: [AltFunctionInfo] -> [FunctionInfo]
   toFuncInfos altFuncInfos = map toFuncInfo altFuncInfos
 
   toFuncInfo :: AltFunctionInfo -> FunctionInfo
-  toFuncInfo (Crawler.ReadersAlternatives.FunctionInfo a te b c d e)
-      = Crawler.Readers.FunctionInfo a (adjustTypeExpr te) b c d e
+  toFuncInfo (Crawler.AltTypes.FunctionInfo a te b c d e)
+      = Crawler.Types.FunctionInfo a (adjustTypeExpr te) b c d e
   
   toTypeInfo :: AltTypeInfo -> TypeInfo
-  toTypeInfo (Crawler.ReadersAlternatives.TypeInfo a constr b c d e) =
-    Crawler.Readers.TypeInfo a (toConstructors constr) b c d e
+  toTypeInfo (Crawler.AltTypes.TypeInfo a constr b c d e) =
+    Crawler.Types.TypeInfo a (toConstructors constr) b c d e
 
   -- Transforms the constructors, by changing the TypeExpr to the normal format
-  toConstructors :: [(Crawler.ReadersAlternatives.QName,
-                      [Crawler.ReadersAlternatives.TypeExpr])]
+  toConstructors :: [(Crawler.AltTypes.QName,
+                      [Crawler.AltTypes.TypeExpr])]
                  -> [(FlatCurry.Types.QName, [FlatCurry.Types.TypeExpr])]
   toConstructors constrs = map (\(x, t) -> (x, map adjustTypeExpr t)) constrs
 
   -- Changes an alternative TypeExpr into a normal TypeExpr
   -- by changing the ForallTypes structure.
-  adjustTypeExpr :: Crawler.ReadersAlternatives.TypeExpr
-                 -> FlatCurry.Types.TypeExpr
-  adjustTypeExpr (Crawler.ReadersAlternatives.TVar a) =
+  adjustTypeExpr :: Crawler.AltTypes.TypeExpr -> FlatCurry.Types.TypeExpr
+  adjustTypeExpr (Crawler.AltTypes.TVar a) =
     FlatCurry.Types.TVar a
-  adjustTypeExpr (Crawler.ReadersAlternatives.FuncType t1 t2) =
+  adjustTypeExpr (Crawler.AltTypes.FuncType t1 t2) =
     FlatCurry.Types.FuncType (adjustTypeExpr t1) (adjustTypeExpr t2)
-  adjustTypeExpr (Crawler.ReadersAlternatives.TCons a ts) =
+  adjustTypeExpr (Crawler.AltTypes.TCons a ts) =
     FlatCurry.Types.TCons a (map adjustTypeExpr ts)
-  adjustTypeExpr (Crawler.ReadersAlternatives.ForallType tVarIndexs t) =
+  adjustTypeExpr (Crawler.AltTypes.ForallType tVarIndexs t) =
     FlatCurry.Types.ForallType (map adjustTVarIndex tVarIndexs)
                                (adjustTypeExpr t)
 
-  adjustTVarIndex :: Crawler.ReadersAlternatives.TVarIndex -> TVarWithKind
+  adjustTVarIndex :: Crawler.AltTypes.TVarIndex -> TVarWithKind
   adjustTVarIndex x = (x, KStar)

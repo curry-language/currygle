@@ -22,7 +22,7 @@ import FlatCurry.Types
 import FlatCurry.FlexRigid
 import System.FilePath
 
-import Crawler.Readers
+import Crawler.Types
 import Index.Signature
 import Index.Helper    ( toLowerS )
 import Settings

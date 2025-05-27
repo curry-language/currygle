@@ -108,49 +108,53 @@ parseSearchQuery query =
           Just (j, jl) -> parseJunctor sq (drop jl left) j
 
 parseSingle :: String -> (SearchQuery, String)
-parseSingle text = (Single (fst(parseSearchTerm text)), snd(parseSearchTerm text))
--- Takes the leftover string and the first searchQuery which was parsed, and returns an AND searchQuery
+parseSingle text =
+  (Single (fst(parseSearchTerm text)), snd(parseSearchTerm text))
+-- Takes the leftover string and the first searchQuery which was parsed,
+-- and returns an AND searchQuery.
 -- Assumes the AND is removed, as well as all white spaces
-parseJunctor :: SearchQuery -> String -> (SearchQuery -> SearchQuery -> SearchQuery) -> Maybe (SearchQuery, String)
-parseJunctor prevSq text junctor =  if dropWhile (\x -> x==' ') text == "" then
-                                      Nothing
-                                    else
-                                      case parseSearchQuery text of
-                                          Nothing -> Nothing
-                                          Just (sq1, left1) -> Just (junctor prevSq sq1, left1)
+parseJunctor :: SearchQuery -> String -> (SearchQuery -> SearchQuery
+             -> SearchQuery) -> Maybe (SearchQuery, String)
+parseJunctor prevSq text junctor =
+  if null (dropWhile (\x -> x==' ') text)
+    then Nothing
+    else case parseSearchQuery text of
+           Nothing -> Nothing
+           Just (sq1, left1) -> Just (junctor prevSq sq1, left1)
 
--- Gets a String, and returns the next Junctor, AND OR Not, or Nothing if the is none left
+-- Gets a String, and returns the next Junctor, AND OR Not, or Nothing
+-- if the is none left
 getNextJunctor :: String -> Maybe ((SearchQuery->SearchQuery->SearchQuery), Int)
-getNextJunctor t = let t1 = dropWhile (\x -> x == ' ') t in
-                        if length t1 == 0 then
-                          Nothing
-                        else if head t1 == '{' then
-                          Just (AND, 1)
-                        else if take 4 t1 == "AND " then
-                          Just (AND, 4)
-                        else if take 4 t1 == "NOT " then
-                          Just (NOT, 4)
-                        else if take 3 t1 == "OR " then
-                          Just (OR, 3)
-                        else 
-                          Just (AND, 0)
+getNextJunctor t
+  | length t1 == 0      = Nothing
+  | head t1 == '{'      = Just (AND, 1)
+  | take 4 t1 == "AND " =  Just (AND, 4)
+  | take 4 t1 == "NOT " =  Just (NOT, 4)
+  | take 3 t1 == "OR "  =  Just (OR, 3)
+  | otherwise           =  Just (AND, 0)
+ where
+  t1 = dropWhile (\x -> x == ' ') t
 
---Takes a string to be split, the number of open curly brackets, and returns the split string, if the curly bracket closes
+-- Takes a string to be split, the number of open curly brackets,
+-- and returns the split string, if the curly bracket closes.
 splitByClosingCurlyBracket :: String -> Int -> Maybe (String, String)
 splitByClosingCurlyBracket []     _ = Nothing
-splitByClosingCurlyBracket (c:cs) n | c == '}' && n >  1 = case splitByClosingCurlyBracket cs (n - 1) of
-                                                              Nothing       -> Nothing
-                                                              Just (s1,s2)  -> Just (c:s1,s2)
-                                    | c == '}' && n == 1 = Just ("", cs)
-                                    | c == '{'           = case splitByClosingCurlyBracket cs (n + 1) of
-                                                              Nothing       -> Nothing
-                                                              Just (s1,s2)  -> Just (c:s1,s2)
-                                    | otherwise          = case splitByClosingCurlyBracket cs n of
-                                                              Nothing       -> Nothing
-                                                              Just (s1,s2)  -> Just (c:s1,s2)
+splitByClosingCurlyBracket (c:cs) n
+  | c == '}' && n >  1 = case splitByClosingCurlyBracket cs (n - 1) of
+                           Nothing       -> Nothing
+                           Just (s1,s2)  -> Just (c:s1,s2)
+  | c == '}' && n == 1 = Just ("", cs)
+  | c == '{'           = case splitByClosingCurlyBracket cs (n + 1) of
+                           Nothing       -> Nothing
+                           Just (s1,s2)  -> Just (c:s1,s2)
+  | otherwise          = case splitByClosingCurlyBracket cs n of
+                           Nothing       -> Nothing
+                           Just (s1,s2)  -> Just (c:s1,s2)
     
--- Parses a SearchTerm. A SearchTerm ends either, because of the next AND, OR, Not, the end of the string,
--- a : indicating the start of the next searchterm, or an error, because the word after the : is not valid
+-- Parses a SearchTerm.
+-- A SearchTerm ends either, because of the next AND, OR, Not,
+-- the end of the string, a : indicating the start of the next searchterm,
+-- or an error, because the word after the : is not valid.
 parseSearchTerm :: String -> (SearchTerm, String)
 parseSearchTerm text =
   let (toBeParsed, leftOver) = getStringUntilEndOfSearchTerm text
@@ -196,20 +200,18 @@ parseSearchTerm text =
   adjustTerm :: String -> String
   adjustTerm = map toLower . strip
 
--- Gets a String, goes until the next {, }, :, AND, OR or NOT, and returns the String it walked through, as well as
--- the rest String
+-- Gets a String, goes until the next {, }, :, AND, OR or NOT, and returns
+-- the String it walked through, as well as the rest String.
 parseUntilNextDeliminator :: String -> (String, String)
-parseUntilNextDeliminator text = let nextDelPos = getNextDelimPos text in
-                                    (take nextDelPos text, drop nextDelPos text)
+parseUntilNextDeliminator text = let nextDelPos = getNextDelimPos text
+                                 in (take nextDelPos text, drop nextDelPos text)
 
--- Returns the position of the next deliminator, :, OR, AND or NOT. If none is present, it
--- returns the length of the String
+-- Returns the position of the next deliminator, :, OR, AND or NOT.
+-- If none is present, it returns the length of the String.
 getNextDelimPos :: String -> Int
 getNextDelimPos []     = 0
-getNextDelimPos (x:xs) = if x == ':' then 0 else
-                         if x == '{' then 0 else
-                         if x == '}' then 0 else
-                         if take 4 (x:xs) == "AND " then 0 else
-                         if take 3 (x:xs) == "OR " then 0 else
-                         if take 4 (x:xs) == "NOT " then 0 else
-                         1 + getNextDelimPos xs
+getNextDelimPos (x:xs) =
+  if x == ':' || x == '{' || x == '}' ||
+    take 4 (x:xs) == "AND " || take 3 (x:xs) == "OR " || take 4 (x:xs) == "NOT "
+    then 0
+    else 1 + getNextDelimPos xs

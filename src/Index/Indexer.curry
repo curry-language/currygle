@@ -18,7 +18,7 @@ import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist )
 import System.FilePath      ( (</>) )
 
 import Crawler.Crawler
-import Crawler.Readers
+import Crawler.Types
 import Index.Trie
 import Index.Item
 import Index.Signature

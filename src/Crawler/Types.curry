@@ -1,20 +1,22 @@
 ----------------------------------------------------------------------
---- Data types to be used to read in CurryInfo. The Datatypes are from
---- the CurryInfo.CDoc module.
+--- Data types to be used to read CurryInfo (`.cdoc`) files.
+--- The data types are taken from the module `CurryInfo.CDoc` and
+--- duplicated here, since all the other stuff from the CurryDoc package
+--- is not needed.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module Crawler.Readers
+module Crawler.Types
   where
 
 import FlatCurry.Types
 import FlatCurry.FlexRigid
 
--- These are the classes from the CurryDoc.CDoc module.
--- This search engine does not need the functions
--- so that the pure structure of the data types is enough.
+-- These are the types from the module `CurryDoc.CDoc`.
+-- Since Currygle does not need the operations of that module,
+-- we just redefined the data types here.
 
 -- the name
 -- the author

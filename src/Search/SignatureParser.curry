@@ -1,12 +1,11 @@
 module Search.SignatureParser ( parseSignature )
  where
 
-import Index.Signature
-
 import Data.List
-import Data.Maybe
 
 import FlatCurry.Types hiding (Var, Type)
+
+import Index.Signature
 
 -- Reads a String as a signature
 -- It could start with ( in case of unit type, tuple or for function
@@ -46,10 +45,9 @@ parseSignature text = case splitFunctionArguments text of
     Just (next, left) ->
       if length left == 0
         then Just [next]
-        else if isNothing (splitFunctionArguments left)
-               then Nothing
-               else let Just args = (splitFunctionArguments left)
-                    in Just (next:args)
+        else case splitFunctionArguments left of
+               Nothing   -> Nothing
+               Just args -> Just (next:args)
   getNextFunArg :: String -> String -> Int -> Int -> Maybe (String, String)
   getNextFunArg [] acc p b    | p == 0 && b == 0 = Just (acc, "")
                               | otherwise        = Nothing

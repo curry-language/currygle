@@ -1,18 +1,23 @@
 ----------------------------------------------------------------------
---- Data types to be used to read in CurryInfo. It is an alternative way
---- to parse, in case the other reader fails.
+--- Data types to be used to read older CurryInfo (`.cdoc`) files which
+--- have been generated before base version 3.0.0.
+--- Since these files contain type expressions with a different
+--- representation of `ForallTypes` (see the definition of `TypeExpr`
+--- in this module below), these data types are used for reading
+--- if reading w.r.t. `Crawler.Types` fails.
 ---
---- @author Helge Knof
---- @version 07.12.2024
+--- @author Helge Knof (with changes by Michael Hanus)
+--- @version May 2025
 ----------------------------------------------------------------------
 
-module Crawler.ReadersAlternatives
+module Crawler.AltTypes
   where
 
 import FlatCurry.FlexRigid
 
--- These are the classes from the CurryDoc.CDoc module. This search engine doesn't need
--- the functions, so the pure structure of the data types is enough.
+-- These are the types from the module `CurryDoc.CDoc`.
+-- Since Currygle does not need the operations of that module,
+-- we just redefined the data types here.
 
 type TVarIndex = Int
 
@@ -50,6 +55,11 @@ data AltTypeInfo =
   TypeInfo String [(QName, [TypeExpr])] [TVarIndex] String String Bool
   deriving (Show,Read)
 
+-- This is the representation of type expressions used in FlatCurry
+-- in versions before 3.0.0 where `ForallType` does not contain
+-- a kind component. Since there exist documentation files (`.cdoc`)
+-- with this old representation, we read them according to this
+-- definition and translate it into the newer representation.
 data TypeExpr = TVar Int
               | FuncType TypeExpr TypeExpr
               | TCons QName [TypeExpr]

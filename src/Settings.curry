@@ -18,6 +18,10 @@ import PackageConfig ( packageVersion )
 ------------------------------------------------------------------------------
 -- Some constants.
 
+--- The version date of Currygle.
+currygleDate :: String
+currygleDate = "27/05/25"
+
 --- The banner of Currygle.
 currygleBanner :: String
 currygleBanner = unlines [bannerLine, bannerText, bannerLine]
@@ -26,10 +30,6 @@ currygleBanner = unlines [bannerLine, bannerText, bannerLine]
                currygleDate ++ ")"
   bannerLine = take (length bannerText) (repeat '=')
 
-
---- The version date of Currygle.
-currygleDate :: String
-currygleDate = "26/05/25"
 
 --- The maximum amount of results returned by a search.
 maxSearchResults :: Int
