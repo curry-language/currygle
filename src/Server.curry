@@ -57,7 +57,7 @@ serverLoopOnHandle opts socket index handle = do
       printWhenAll opts "SERVER connection: eof"
       serverLoop opts socket index
     else do
-      request <- fmap strip $ hGetLineUntilEOF handle
+      request <- strip <$> hGetLineUntilEOF handle
       printWhenStatus opts $ "MESSAGE RECEIVED: '" ++ request ++ "'"
       hFlush stdout
       case break (==' ') request of
@@ -72,7 +72,7 @@ serverLoopOnHandle opts socket index handle = do
   searchSend searchop query = do
     answer <- case parseSearchText query of
                  Nothing -> return "Parse error"
-                 Just q  -> fmap show (searchop index q)
+                 Just q  -> show <$> searchop index q
     sendResult answer
 
   sendResult resultstring = do

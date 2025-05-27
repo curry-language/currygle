@@ -136,17 +136,17 @@ writeIndex opts indexpath
 -- Reads the Currygle index from the argument directory.
 readIndex :: String -> IO Index
 readIndex indexpath = do
-  items   <- fmap mbEmptyMap  $ readIndexFile indexItemFileName
-  descrs  <- fmap mbEmptyTrie $ readIndexFile descrTrieFileName
-  mods    <- fmap mbEmptyTrie $ readIndexFile moduleTrieFileName
-  packs   <- fmap mbEmptyTrie $ readIndexFile packageTrieFileName
-  funcs   <- fmap mbEmptyTrie $ readIndexFile functionTrieFileName
-  types   <- fmap mbEmptyTrie $ readIndexFile typeTrieFileName
-  classes <- fmap mbEmptyTrie $ readIndexFile classTrieFileName
-  authors <- fmap mbEmptyTrie $ readIndexFile authorTrieFileName
-  det     <- fmap mbEmptyMap  $ readIndexFile detMapFileName
-  flex    <- fmap mbEmptyMap  $ readIndexFile flexMapFileName
-  sigs    <- fmap mbEmptyTrie $ readIndexFile signatureTrieFileName
+  items   <- mbEmptyMap  <$> readIndexFile indexItemFileName
+  descrs  <- mbEmptyTrie <$> readIndexFile descrTrieFileName
+  mods    <- mbEmptyTrie <$> readIndexFile moduleTrieFileName
+  packs   <- mbEmptyTrie <$> readIndexFile packageTrieFileName
+  funcs   <- mbEmptyTrie <$> readIndexFile functionTrieFileName
+  types   <- mbEmptyTrie <$> readIndexFile typeTrieFileName
+  classes <- mbEmptyTrie <$> readIndexFile classTrieFileName
+  authors <- mbEmptyTrie <$> readIndexFile authorTrieFileName
+  det     <- mbEmptyMap  <$> readIndexFile detMapFileName
+  flex    <- mbEmptyMap  <$> readIndexFile flexMapFileName
+  sigs    <- mbEmptyTrie <$> readIndexFile signatureTrieFileName
   return $ Index items descrs mods packs funcs types classes authors det flex
                  sigs
  where

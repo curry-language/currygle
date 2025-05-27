@@ -111,6 +111,7 @@ indexer: $(WEBDIR)/bin/$(CURRYGLE)
 $(WEBDIR)/bin/$(CURRYGLE): $(SOURCES) | $(WEBDIR)
 	mkdir -p $(WEBDIR)/bin
 	$(CPM) --define BIN_INSTALL_PATH=$(WEBDIR)/bin install
+	chmod 755 $@
 
 # check presence of tools required for deployment and install them:
 .PHONY: checkdeploy

@@ -9,53 +9,15 @@ import System.IO
 import FlatCurry.Types
 import RW.Base
 
--- There are three types of Sigatures:
--- a `Type`, i.e., a type constructor applied to arguments,
--- like `[Int]` or `IO a`,
--- a `Function`, e.g., `[a] -> Int`,
--- or a variable with some index.
-data Signature = Type String [Signature]
+-- A signature as presented in the Currygle index is one of the following:
+-- * a variable with some index
+-- * a `Type`, i.e., a type constructor applied to arguments
+--   like `[Int]` or `IO a`
+--  * a `Function`, e.g., `[a] -> Int`,
+data Signature = Var Int
+               | Type String [Signature]
                | Function Signature Signature
-               | Var Int
-  deriving (Read, Show)
-
-instance Eq Signature where
-    (Var _) == (Type _ _) = False
-    (Var _) == (Function _ _) = False
-    (Type _ _) == (Var _) = False
-    (Type _ _) == (Function _ _) = False
-    (Function _ _) == (Var _) = False
-    (Function _ _) == (Type _ _) = False
-    (Var x) == (Var y) = x == y
-    (Type n1 sigs1) == (Type n2 sigs2) = n1 == n2 && eqSigList sigs1 sigs2
-    (Function s1 s2) == (Function s3 s4) = s1 == s3 && s2 == s4
-
--- Computes if the first signature list is equal to the second one, by testing elements,
--- until one is different
-eqSigList :: [Signature] -> [Signature] -> Bool
-eqSigList [] []                 = True
-eqSigList [] (_:_)              = False
-eqSigList (_:_) []              = False
-eqSigList (s1:sigs1) (s2:sigs2) = if s1 == s2 then eqSigList sigs1 sigs2 else False
-
-instance Ord Signature where
-    (Var _) <= (Type _ _) = True
-    (Var _) <= (Function _ _) = True
-    (Type _ _) <= (Function _ _) = True
-    (Type _ _) <= (Var _) = False
-    (Function _ _) <= (Var _) = False
-    (Function _ _) <= (Type _ _) = False
-    (Var x) <= (Var y) = x <= y
-    (Function x y) <= (Function v w) = if x == v then y <= w else x <= v
-    (Type n1 sigs1) <= (Type n2 sigs2) = if n1 == n2 then leSigList sigs1 sigs2 else n1 <= n2
-
--- Computes if the first signature list is less or equal to the second one, by testing elements,
--- until one is different
-leSigList :: [Signature] -> [Signature] -> Bool
-leSigList [] []                 = True
-leSigList [] (_:_)              = True
-leSigList (_:_) []              = False
-leSigList (s1:sigs1) (s2:sigs2) = if s1 == s2 then leSigList sigs1 sigs2 else s1 <= s2
+  deriving (Eq, Ord, Read, Show)
 
 --- Normalize a `Signature` expression by enumerating all type variable
 --- from 0 in the order of their occurrences.

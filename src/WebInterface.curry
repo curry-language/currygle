@@ -32,7 +32,7 @@ import Search.Query
 import Server             ( profilingSearchClient, searchClient )
 
 main :: IO HtmlPage
-main = fmap urlencoded2string getUrlParameter >>= runWithUrlParams
+main = getUrlParameter >>= runWithUrlParams . urlencoded2string
 
 --- Execute script with URL parameter:
 --- - no parameter: interactive mode

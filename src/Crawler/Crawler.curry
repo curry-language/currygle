@@ -41,7 +41,7 @@ getCDocFilePaths :: FilePath -> IO [FilePath]
 getCDocFilePaths path = do
   paths <- getDirectoryContents path
   let dirpaths = map (path </>) $ filter (`notElem` [".", ".."]) paths
-  fmap concat $ mapM getCDocs dirpaths
+  concat <$> mapM getCDocs dirpaths
  where
   getCDocs :: String -> IO [String]
   getCDocs path1 = if isExtensionOf "cdoc" path1
@@ -92,7 +92,8 @@ readCurryInfo text
         (map toTypeInfo altTypeInfos)
   
   toModInfo :: AltModuleInfo -> ModuleInfo
-  toModInfo (Crawler.ReadersAlternatives.ModuleInfo s1 s2 s3) = Crawler.Readers.ModuleInfo s1 s2 s3
+  toModInfo (Crawler.ReadersAlternatives.ModuleInfo s1 s2 s3) =
+    Crawler.Readers.ModuleInfo s1 s2 s3
 
   toFuncInfos :: [AltFunctionInfo] -> [FunctionInfo]
   toFuncInfos altFuncInfos = map toFuncInfo altFuncInfos
@@ -106,15 +107,24 @@ readCurryInfo text
     Crawler.Readers.TypeInfo a (toConstructors constr) b c d e
 
   -- Transforms the constructors, by changing the TypeExpr to the normal format
-  toConstructors :: [(Crawler.ReadersAlternatives.QName, [Crawler.ReadersAlternatives.TypeExpr])] -> [(FlatCurry.Types.QName, [FlatCurry.Types.TypeExpr])]
+  toConstructors :: [(Crawler.ReadersAlternatives.QName,
+                      [Crawler.ReadersAlternatives.TypeExpr])]
+                 -> [(FlatCurry.Types.QName, [FlatCurry.Types.TypeExpr])]
   toConstructors constrs = map (\(x, t) -> (x, map adjustTypeExpr t)) constrs
 
-  -- Changes an alternative TypeExpr into a normal TypeExpr, by changing the ForallTypes structure
-  adjustTypeExpr :: Crawler.ReadersAlternatives.TypeExpr -> FlatCurry.Types.TypeExpr
-  adjustTypeExpr (Crawler.ReadersAlternatives.TVar a) = FlatCurry.Types.TVar a
-  adjustTypeExpr (Crawler.ReadersAlternatives.FuncType t1 t2) = FlatCurry.Types.FuncType (adjustTypeExpr t1) (adjustTypeExpr t2)
-  adjustTypeExpr (Crawler.ReadersAlternatives.TCons a ts) = FlatCurry.Types.TCons a (map adjustTypeExpr ts)
-  adjustTypeExpr (Crawler.ReadersAlternatives.ForallType tVarIndexs t) = FlatCurry.Types.ForallType (map adjustTVarIndex tVarIndexs) (adjustTypeExpr t)
+  -- Changes an alternative TypeExpr into a normal TypeExpr
+  -- by changing the ForallTypes structure.
+  adjustTypeExpr :: Crawler.ReadersAlternatives.TypeExpr
+                 -> FlatCurry.Types.TypeExpr
+  adjustTypeExpr (Crawler.ReadersAlternatives.TVar a) =
+    FlatCurry.Types.TVar a
+  adjustTypeExpr (Crawler.ReadersAlternatives.FuncType t1 t2) =
+    FlatCurry.Types.FuncType (adjustTypeExpr t1) (adjustTypeExpr t2)
+  adjustTypeExpr (Crawler.ReadersAlternatives.TCons a ts) =
+    FlatCurry.Types.TCons a (map adjustTypeExpr ts)
+  adjustTypeExpr (Crawler.ReadersAlternatives.ForallType tVarIndexs t) =
+    FlatCurry.Types.ForallType (map adjustTVarIndex tVarIndexs)
+                               (adjustTypeExpr t)
 
   adjustTVarIndex :: Crawler.ReadersAlternatives.TVarIndex -> TVarWithKind
   adjustTVarIndex x = (x, KStar)

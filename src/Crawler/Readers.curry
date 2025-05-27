@@ -12,8 +12,9 @@ module Crawler.Readers
 import FlatCurry.Types
 import FlatCurry.FlexRigid
 
--- These are the classes from the CurryDoc.CDoc module. This search engine doesn't need
--- the functions, so the pure structure of the data types is enough.
+-- These are the classes from the CurryDoc.CDoc module.
+-- This search engine does not need the functions
+-- so that the pure structure of the data types is enough.
 
 -- the name
 -- the author

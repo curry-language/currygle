@@ -32,7 +32,7 @@ mainLoop index = do
   iseof <- hIsEOF stdin
   if iseof
     then mainLoop index
-    else do input <- fmap strip getLine
+    else do input <- strip <$> getLine
             if null input
               then mainLoop index
               else if input `isPrefixOf` ":halt"
