@@ -10,18 +10,17 @@ module Search.Execute
   ( currygleSearch, profilingCurrygleSearch )
  where
 
-import Data.List
-import Data.Maybe
+import Data.List      ( sortBy )
 import System.CPUTime ( getCPUTime )
 
 import Data.Map
 import FlatCurry.FlexRigid
 
-import Index.Helper        ( toLowerS )
+import Index.Helper    ( toLowerS )
 import Index.Indexer
 import Index.Trie
 import Index.Item
-import Index.Signature hiding (Function, Type)
+import Index.Signature ( flattenSignature )
 import Search.Query
 import Settings
 
@@ -105,7 +104,7 @@ searchForTerm _ Rigid (Index _ _ _ _ _ _ _ _ _ flex _) =
   cleanMap flex matchRigid (\_ -> 0)
 searchForTerm _ (Signature st) (Index _ _ _ _ _ _ _ _ _ _ sigs) =
   case st of Nothing -> Data.Map.empty
-             Just x  -> trieSearch sigs (seperateSig x)
+             Just x  -> trieSearch sigs (flattenSignature x)
 searchForTerm fuzzy (All st) index =
   search fuzzy (OR (OR (Single (Function st))
                        (Single (Type st)))

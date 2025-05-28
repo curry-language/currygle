@@ -14,10 +14,10 @@ import Data.Map
 import FlatCurry.FlexRigid
 import FlatCurry.Types
 import RW.Base              ( readDataFile, writeDataFile )
-import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist )
+import System.Directory     ( createDirectoryIfMissing )
 import System.FilePath      ( (</>) )
 
-import Crawler.Crawler
+import Crawler.Crawler      ( getAllCurryInfo )
 import Crawler.Types
 import Index.Trie
 import Index.Item

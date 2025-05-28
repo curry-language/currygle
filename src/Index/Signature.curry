@@ -1,7 +1,9 @@
 {-# OPTIONS_FRONTEND -Wno-incomplete-patterns #-}
 
 module Index.Signature
-    where
+  ( Signature(..), flattenSignature, prettySig, prettySigs
+  , typeExprToSignature )
+ where
 
 import Data.List  ( intercalate )
 import System.IO
@@ -51,12 +53,13 @@ signatureToTypeExpr (Function s1 s2) =
 signatureToTypeExpr (Type n2 tes)    =
   TCons ("",n2) (map signatureToTypeExpr tes)
 
--- Does a flat seperation of a signature to a list. So a -> b becomes [a,b],
--- and (a->b)->b becomes [(a->b), b]
-seperateSig :: Signature -> [Signature]
-seperateSig (Var x)             = [Var x]
-seperateSig (Type x y)          = [Type x y]
-seperateSig (Function s1 s2)    = s1 : seperateSig s2
+-- Flattens a signature into a list of argument and result types.
+-- For instance, `a -> b` becomes `[a,b]`,
+-- and `(a -> b)-> b` becomes `[(a->b), b]`
+flattenSignature :: Signature -> [Signature]
+flattenSignature (Var x)          = [Var x]
+flattenSignature (Type x y)       = [Type x y]
+flattenSignature (Function s1 s2) = s1 : flattenSignature s2
 
 -- Shows a list of Signatures as a Function
 prettySigs :: [Signature] -> String

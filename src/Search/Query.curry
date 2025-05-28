@@ -20,13 +20,14 @@ import Index.Item
 import Index.Signature
 import Search.SignatureParser ( parseSignature )
 
--- The SearchQuery is a tree which has the SearchTerms as leaves,
--- and AND, OR or NOT AND as the inner nodes
+--- A `SearchQuery` is a tree which has `SearchTerm`s as leaves,
+--- and AND, OR, or NOT as the inner nodes.
 data SearchQuery = Single SearchTerm 
                  | AND SearchQuery SearchQuery   
                  | OR  SearchQuery SearchQuery
                  | NOT SearchQuery SearchQuery
 
+--- Pretty prints a `SearchQuery`.
 prettySearchQuery :: SearchQuery -> String
 prettySearchQuery q = prettySQ False q
  where
@@ -40,6 +41,7 @@ prettySearchQuery q = prettySQ False q
 
   bracketIf wb s = if wb then "{" ++ s ++ "}" else s
 
+--- A `SearchTerm` is either a search option string or just a string (`All`).
 data SearchTerm = Description String
                 | Module String
                 | InModule String
@@ -55,6 +57,7 @@ data SearchTerm = Description String
                 | Signature (Maybe Signature)
                 | All String
 
+--- Pretty prints a `SearchQuery`.
 prettySearchTerm :: SearchTerm -> String
 prettySearchTerm (Description s) = ":description " ++ s -- should not occur
 prettySearchTerm (Module      s) = ":module " ++ s
@@ -71,7 +74,8 @@ prettySearchTerm Flexible        = ":flexible"
 prettySearchTerm Rigid           = ":rigid"
 prettySearchTerm (All         s) = s
 
--- Parses a searchtext into a searchquery
+------------------------------------------------------------------------------
+-- Parses a string into a `SearchQuery`.
 parseSearchText :: String -> Maybe SearchQuery
 parseSearchText text = case parseSearchQuery text of
   Nothing      -> Nothing
@@ -81,45 +85,48 @@ parseSearchText text = case parseSearchQuery text of
 -- It parses until it finds a curly bracket it didn't open, or the String ends
 parseSearchQuery :: String -> Maybe (SearchQuery, String)
 parseSearchQuery query = 
-  let query1 = dropWhile (\x -> x == ' ') query in
-  if head query1 == '}' then
-    Nothing
-  else if head query1 == '{' then
-    case splitByClosingCurlyBracket (drop 1 query1) 1 of
-      Nothing -> Nothing
-      Just (n, l) ->  if null l then
-                        parseSearchQuery n
-                      else case getNextJunctor l of
-                        Nothing -> case parseSearchQuery n of
-                                        Nothing -> Nothing
-                                        Just (sq1, _) -> case parseSearchQuery l of
-                                          Nothing -> Nothing
-                                          Just (sq2, _) -> Just (AND sq1 sq2, "")
-                        Just (j, jl) -> case parseSearchQuery n of
-                          Nothing -> Nothing
-                          Just (sq, _) -> parseJunctor sq (drop jl l) j
-  else
-    let (sq,left) = parseSingle query1 in
-      if dropWhile (\x -> x == ' ') left == "" then
-        Just (sq, "")
-      else
-        case getNextJunctor left of
-          Nothing -> Just (parseSingle left)
-          Just (j, jl) -> parseJunctor sq (drop jl left) j
+  let query1 = dropWhile (== ' ') query in
+  if head query1 == '}'
+    then Nothing
+    else
+      if head query1 == '{'
+        then
+          case splitByClosingCurlyBracket (drop 1 query1) 1 of
+            Nothing -> Nothing
+            Just (n, l) ->
+              if null l
+                then parseSearchQuery n
+                else case getNextJunctor l of
+                      Nothing -> case parseSearchQuery n of
+                                    Nothing       -> Nothing
+                                    Just (sq1, _) -> case parseSearchQuery l of
+                                      Nothing       -> Nothing
+                                      Just (sq2, _) -> Just (AND sq1 sq2, "")
+                      Just (j, jl) -> case parseSearchQuery n of
+                        Nothing      -> Nothing
+                        Just (sq, _) -> parseJunctor sq (drop jl l) j
+        else
+          let (sq,left) = parseSingle query1 in
+            if dropWhile (\x -> x == ' ') left == ""
+              then Just (sq, "")
+              else case getNextJunctor left of
+                     Nothing -> Just (parseSingle left)
+                     Just (j, jl) -> parseJunctor sq (drop jl left) j
 
 parseSingle :: String -> (SearchQuery, String)
 parseSingle text =
-  (Single (fst(parseSearchTerm text)), snd(parseSearchTerm text))
+  (Single (fst (parseSearchTerm text)), snd (parseSearchTerm text))
+
 -- Takes the leftover string and the first searchQuery which was parsed,
 -- and returns an AND searchQuery.
 -- Assumes the AND is removed, as well as all white spaces
 parseJunctor :: SearchQuery -> String -> (SearchQuery -> SearchQuery
              -> SearchQuery) -> Maybe (SearchQuery, String)
 parseJunctor prevSq text junctor =
-  if null (dropWhile (\x -> x==' ') text)
+  if null (dropWhile (==' ') text)
     then Nothing
     else case parseSearchQuery text of
-           Nothing -> Nothing
+           Nothing           -> Nothing
            Just (sq1, left1) -> Just (junctor prevSq sq1, left1)
 
 -- Gets a String, and returns the next Junctor, AND OR Not, or Nothing
@@ -133,7 +140,7 @@ getNextJunctor t
   | take 3 t1 == "OR "  =  Just (OR, 3)
   | otherwise           =  Just (AND, 0)
  where
-  t1 = dropWhile (\x -> x == ' ') t
+  t1 = dropWhile (== ' ') t
 
 -- Takes a string to be split, the number of open curly brackets,
 -- and returns the split string, if the curly bracket closes.
@@ -151,30 +158,32 @@ splitByClosingCurlyBracket (c:cs) n
                            Nothing       -> Nothing
                            Just (s1,s2)  -> Just (c:s1,s2)
     
--- Parses a SearchTerm.
--- A SearchTerm ends either, because of the next AND, OR, Not,
--- the end of the string, a : indicating the start of the next searchterm,
--- or an error, because the word after the : is not valid.
+-- Parses a string into a `SearchTerm` which is returned together with the
+-- unparsed remaining string.
+-- A `SearchTerm` ends either, because of the next AND, OR, NOT,
+-- the end of the string, a `:` indicating the start of the next `SearchTerm`,
+-- or an error, because the word after the `:` is not valid.
 parseSearchTerm :: String -> (SearchTerm, String)
 parseSearchTerm text =
   let (toBeParsed, leftOver) = getStringUntilEndOfSearchTerm text
       (wd,wds) = break (==' ') toBeParsed
-  in if take 1 wd == ":"
-       then case completeOption (tail wd) of
-              "module"           -> (Module (adjustTerm wds), leftOver)
-              "inmodule"         -> (InModule (adjustTerm wds), leftOver)
-              "inpackage"        -> (InPackage (adjustTerm wds), leftOver)
-              "function"         -> (Function (adjustTerm wds), leftOver)
-              "type"             -> (Type (adjustTerm wds), leftOver)
-              "class"            -> (Class (adjustTerm wds), leftOver)
-              "author"           -> (Author (adjustTerm wds), leftOver)
-              "signature"        -> (Signature (parseSignature wds), leftOver)
-              "deterministic"    -> (Det, leftOver)
-              "nondeterministic" -> (NonDet, leftOver)
-              "flexible"         -> (Flexible, leftOver)
-              "rigid"            -> (Rigid, leftOver)
-              _                  -> (All (adjustTerm toBeParsed), leftOver)
-       else (All (adjustTerm toBeParsed), leftOver)
+  in case wd of
+       (':':opt) ->
+          case completeOption opt of
+            "module"           -> (Module (stripToLower wds), leftOver)
+            "inmodule"         -> (InModule (stripToLower wds), leftOver)
+            "inpackage"        -> (InPackage (stripToLower wds), leftOver)
+            "function"         -> (Function (stripToLower wds), leftOver)
+            "type"             -> (Type (stripToLower wds), leftOver)
+            "class"            -> (Class (stripToLower wds), leftOver)
+            "author"           -> (Author (stripToLower wds), leftOver)
+            "signature"        -> (Signature (parseSignature wds), leftOver)
+            "deterministic"    -> (Det, leftOver)
+            "nondeterministic" -> (NonDet, leftOver)
+            "flexible"         -> (Flexible, leftOver)
+            "rigid"            -> (Rigid, leftOver)
+            _                  -> (All (stripToLower toBeParsed), leftOver)
+       _ -> (All (stripToLower toBeParsed), leftOver)
  where
   -- complete abbreviated options (take the first if not unique)
   completeOption s = case filter (s `isPrefixOf`) options of (o:_) -> o
@@ -196,9 +205,9 @@ parseSearchTerm text =
     = (fst (parseUntilNextDeliminator input),
        snd (parseUntilNextDeliminator input))
 
-  -- Removes spaces from front and back
-  adjustTerm :: String -> String
-  adjustTerm = map toLower . strip
+  -- Removes spaces from front and back and maps the string to lowercase.
+  stripToLower :: String -> String
+  stripToLower = map toLower . strip
 
 -- Gets a String, goes until the next {, }, :, AND, OR or NOT, and returns
 -- the String it walked through, as well as the rest String.

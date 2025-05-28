@@ -5,7 +5,7 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module WebInterface --( main, searchForm )
+module WebInterface ( main, searchForm )
  where
 
 import Data.List      ( init, intercalate, isPrefixOf, last, split )

@@ -6,7 +6,7 @@
 --- @version May 2025
 ----------------------------------------------------------------------
 
-module Crawler.Crawler --(getAllCurryInfo)
+module Crawler.Crawler ( getAllCurryInfo )
   where
 
 import Data.List

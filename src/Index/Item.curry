@@ -16,7 +16,7 @@ module Index.Item
 
 --import System.IO.Unsafe ( unsafePerformIO )
 import Data.List      ( isPrefixOf )
-import System.IO
+import System.IO      ( hPutChar )
 
 import FlatCurry.Types
 import FlatCurry.FlexRigid
@@ -79,7 +79,8 @@ functionInfoToIndexItem :: FunctionInfo -> String -> IndexItem
 functionInfoToIndexItem
   (FunctionInfo name signature modName des nonDet flexRigid) packageName =
   FunctionItem name modName packageName
-    (seperateSig (typeExprToSignature signature)) (not nonDet) flexRigid des
+    (flattenSignature (typeExprToSignature signature))
+    (not nonDet) flexRigid des
 
 -- Turns a TypeInfo into a TypeIndex, used as an index for the search.
 -- It needs the package name as extra input.
