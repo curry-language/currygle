@@ -84,50 +84,40 @@ parseSearchText text = case parseSearchQuery text of
 -- Transforms a query string into a SearchQuery.
 -- It parses until it finds a curly bracket it didn't open, or the String ends
 parseSearchQuery :: String -> Maybe (SearchQuery, String)
-parseSearchQuery query = 
-  let query1 = dropWhile (== ' ') query in
-  if head query1 == '}'
-    then Nothing
-    else
-      if head query1 == '{'
-        then
-          case splitByClosingCurlyBracket (drop 1 query1) 1 of
-            Nothing -> Nothing
-            Just (n, l) ->
-              if null l
-                then parseSearchQuery n
-                else case getNextJunctor l of
-                      Nothing -> case parseSearchQuery n of
-                                    Nothing       -> Nothing
-                                    Just (sq1, _) -> case parseSearchQuery l of
-                                      Nothing       -> Nothing
-                                      Just (sq2, _) -> Just (AND sq1 sq2, "")
-                      Just (j, jl) -> case parseSearchQuery n of
-                        Nothing      -> Nothing
-                        Just (sq, _) -> parseJunctor sq (drop jl l) j
-        else
-          let (sq,left) = parseSingle query1 in
-            if dropWhile (\x -> x == ' ') left == ""
-              then Just (sq, "")
-              else case getNextJunctor left of
-                     Nothing -> Just (parseSingle left)
-                     Just (j, jl) -> parseJunctor sq (drop jl left) j
+parseSearchQuery querystring = 
+  case dropWhile (== ' ') querystring of
+    '}':_  -> Nothing
+    '{':q2 -> do (n,l) <- splitByClosingCurlyBracket q2 1
+                 if null l
+                  then parseSearchQuery n
+                  else case getNextJunctor l of
+                         Nothing -> do (sq1,_) <- parseSearchQuery n
+                                       (sq2,_) <- parseSearchQuery l
+                                       return (AND sq1 sq2, "")
+                         Just (j, jl) ->  do (sq,_) <- parseSearchQuery n
+                                             parseJunctor sq (drop jl l) j
+    q1     ->  let (sq,left) = parseSingle q1
+               in if dropWhile (\x -> x == ' ') left == ""
+                    then Just (sq, "")
+                    else case getNextJunctor left of
+                           Nothing      -> Just (parseSingle left)
+                           Just (j, jl) -> parseJunctor sq (drop jl left) j
 
 parseSingle :: String -> (SearchQuery, String)
-parseSingle text =
-  (Single (fst (parseSearchTerm text)), snd (parseSearchTerm text))
+parseSingle text = (Single searchterm, rems)
+ where (searchterm,rems) = parseSearchTerm text
 
 -- Takes the leftover string and the first searchQuery which was parsed,
 -- and returns an AND searchQuery.
 -- Assumes the AND is removed, as well as all white spaces
-parseJunctor :: SearchQuery -> String -> (SearchQuery -> SearchQuery
-             -> SearchQuery) -> Maybe (SearchQuery, String)
+parseJunctor :: SearchQuery -> String
+             -> (SearchQuery -> SearchQuery -> SearchQuery)
+             -> Maybe (SearchQuery, String)
 parseJunctor prevSq text junctor =
   if null (dropWhile (==' ') text)
     then Nothing
-    else case parseSearchQuery text of
-           Nothing           -> Nothing
-           Just (sq1, left1) -> Just (junctor prevSq sq1, left1)
+    else do (sq1, left1) <- parseSearchQuery text
+            return (junctor prevSq sq1, left1)
 
 -- Gets a String, and returns the next Junctor, AND OR Not, or Nothing
 -- if the is none left
@@ -147,16 +137,13 @@ getNextJunctor t
 splitByClosingCurlyBracket :: String -> Int -> Maybe (String, String)
 splitByClosingCurlyBracket []     _ = Nothing
 splitByClosingCurlyBracket (c:cs) n
-  | c == '}' && n >  1 = case splitByClosingCurlyBracket cs (n - 1) of
-                           Nothing       -> Nothing
-                           Just (s1,s2)  -> Just (c:s1,s2)
-  | c == '}' && n == 1 = Just ("", cs)
-  | c == '{'           = case splitByClosingCurlyBracket cs (n + 1) of
-                           Nothing       -> Nothing
-                           Just (s1,s2)  -> Just (c:s1,s2)
-  | otherwise          = case splitByClosingCurlyBracket cs n of
-                           Nothing       -> Nothing
-                           Just (s1,s2)  -> Just (c:s1,s2)
+  | c == '}' && n >  1 = do (s1,s2) <- splitByClosingCurlyBracket cs (n - 1)
+                            return (c:s1,s2)
+  | c == '}' && n == 1 = return ("", cs)
+  | c == '{'           = do (s1,s2) <- splitByClosingCurlyBracket cs (n + 1)
+                            return (c:s1,s2)
+  | otherwise          = do (s1,s2) <- splitByClosingCurlyBracket cs n
+                            return (c:s1,s2)
     
 -- Parses a string into a `SearchTerm` which is returned together with the
 -- unparsed remaining string.
@@ -212,8 +199,9 @@ parseSearchTerm text =
 -- Gets a String, goes until the next {, }, :, AND, OR or NOT, and returns
 -- the String it walked through, as well as the rest String.
 parseUntilNextDeliminator :: String -> (String, String)
-parseUntilNextDeliminator text = let nextDelPos = getNextDelimPos text
-                                 in (take nextDelPos text, drop nextDelPos text)
+parseUntilNextDeliminator text =
+  let nextDelPos = getNextDelimPos text
+  in (take nextDelPos text, drop nextDelPos text)
 
 -- Returns the position of the next deliminator, :, OR, AND or NOT.
 -- If none is present, it returns the length of the String.
