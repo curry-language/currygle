@@ -15,42 +15,47 @@ module Crawler.AltTypes
 
 import FlatCurry.FlexRigid
 
--- These are the types from the module `CurryDoc.CDoc`.
--- Since Currygle does not need the operations of that module,
--- we just redefined the data types here.
+-- These are the types defined in the module `CurryDoc.CDoc`.
+-- Since Currygle does not import this (large) packages,
+-- we just redefine the data types here.
 
 type TVarIndex = Int
 
 type QName = ([Char], [Char])
 
--- the module
--- the corresponding functions
--- the corresponding data and type declaration
+--- The information about a Curry module contains
+--- * the module information
+--- * information about the function defined in the module
+--- * information about types (also newtypes and classes) defined in the module
 data AltCurryInfo = CurryInfo AltModuleInfo [AltFunctionInfo] [AltTypeInfo]
   deriving (Show,Read)
 
--- the name
--- the author
--- the description
+--- The base information about a module contains
+--- * the name
+--- * the author
+--- * the description
 data AltModuleInfo = ModuleInfo String String String
   deriving (Show,Read)
 
--- the name
--- the signature
--- the corresponding module
--- the description
--- True if property ist defined non-deterministically
--- the flex/rigid status
+--- The information about functions defined in a Curry module contains
+--- * the name
+--- * the signature
+--- * the corresponding module
+--- * the description
+--- * `True` if the function is non-deterministically defined
+--- * the flex/rigid status of the function
 data AltFunctionInfo =
   FunctionInfo String TypeExpr String String Bool FlexRigidResult
   deriving (Show,Read)
 
--- the name, which has _Dict# as a prefix if it is a class
--- the constructors, as a constructor name, and a list of types
--- TVarIndex is a number, no idea what it does
--- the corresponding module
--- the description
--- A unknown bool
+--- The information about types defined in a Curry module contains
+--- * the name (which has `_Dict#` as a prefix if it is a class)
+--- * a list of constructor names and their argument types (or the type name
+---   and the type expression in case of type synonyms)
+--- * a list of type variables (which is non-empty for a polymorphic type)
+--- * the corresponding module
+--- * the description
+--- * a flag which is `True` if it is a type synonym
 data AltTypeInfo =
   TypeInfo String [(QName, [TypeExpr])] [TVarIndex] String String Bool
   deriving (Show,Read)

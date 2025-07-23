@@ -57,7 +57,7 @@ data SearchTerm = Description String
                 | Signature (Maybe Signature)
                 | All String
 
---- Pretty prints a `SearchQuery`.
+--- Pretty prints a `SearchTerm`.
 prettySearchTerm :: SearchTerm -> String
 prettySearchTerm (Description s) = ":description " ++ s -- should not occur
 prettySearchTerm (Module      s) = ":module " ++ s
