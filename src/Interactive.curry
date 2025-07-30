@@ -33,22 +33,22 @@ mainLoop index = do
   if iseof
     then mainLoop index
     else do input <- strip <$> getLine
-            if null input
-              then mainLoop index
-              else if input `isPrefixOf` ":halt"
-                     then putStrLn "Bye!"
-                     else processSearchQuery input >> mainLoop index
+            if input `elem` [":halt", ":h"]
+              then putStrLn "Bye!"
+              else processSearchQuery input >> mainLoop index
  where
   processSearchQuery searchtext = do
     let (fuzzy,query) = if ":fuzzy" `isPrefixOf` searchtext
                           then (True, strip (drop 6 searchtext))
                           else (False,searchtext)
-    case parseSearchText query of
-      Nothing -> putStrLn "Syntax error"
-      Just sq -> do (items,etime) <- profilingCurrygleSearch fuzzy index sq
-                    putStr $ unlines $ line : map prettyResult items ++ [line]
-                    putStrLn $ show (length items) ++ " results" ++
-                               " (found in " ++ show etime ++ " msec)"
+    
+    unless (null query) $ do
+      case parseSearchText query of
+        Nothing -> putStrLn "Syntax error"
+        Just sq -> do (items,etime) <- profilingCurrygleSearch fuzzy index sq
+                      putStr $ unlines $ line : map prettyResult items ++ [line]
+                      putStrLn $ show (length items) ++ " results" ++
+                                " (found in " ++ show etime ++ " msec)"
    where
     line = take 60 (repeat '-')
 

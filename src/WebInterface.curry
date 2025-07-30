@@ -13,12 +13,13 @@ import System.IO
 
 import HTML.Base
 import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput, hrefInfoBadge )
-import Network.URL      ( string2urlencoded, urlencoded2string )
-import System.Directory ( doesFileExist )
-import System.FilePath  ( (</>) )
-import System.IOExts    ( evalCmd )
-import System.Process   ( system )
-import Text.Markdown    ( markdownText2HTML )
+import Network.URL         ( string2urlencoded, urlencoded2string )
+import System.Directory    ( doesFileExist )
+import System.FilePath     ( (</>) )
+import System.IOExts       ( evalCmd )
+import System.Process      ( system )
+import Text.Markdown       ( markdownText2HTML )
+import Control.Applicative ( when )
 
 import Index.Helper       ( strip )
 import Index.Item
@@ -62,30 +63,30 @@ getStatusPage = do
 -- do the search locally), and shows the results in a web page.
 -- If the second argument is `True`, show all results.
 getResultPage :: Bool -> Bool -> String -> IO HtmlPage
-getResultPage withserver showall searchtxt
-  | all isSpace searchtxt -- no query terms present
-  = return defaultPage
-  | otherwise
-  = do let (fuzzy,squery) = if ":fuzzy" `isPrefixOf` searchtxt
-                              then (True, strip (drop 6 searchtxt))
-                              else (False,searchtxt)
-
-       case parseSearchText squery of
-          Nothing  -> return defaultPage
-          Just query ->
-            if withserver
-              then do
-                mbres <- catch
-                          (profilingSearchClient fuzzy squery >>= return . Just)
-                          (\_ -> return Nothing)
-                case mbres of
-                  Nothing  -> do -- try to restart server:
-                                system "make restart >> SERVER.LOG"
-                                resultFromIndex fuzzy query
-                  Just res -> case reads res of
-                    [((items,et),_)] -> getItemspage fuzzy query "" items et
-                    _                -> return defaultPage
-              else resultFromIndex fuzzy query
+getResultPage withserver showall search = do 
+  let searchtxt      = strip search 
+      (fuzzy,squery) = if ":fuzzy" `isPrefixOf` searchtxt
+                         then (True,  strip (drop 6 searchtxt))
+                         else (False, strip searchtxt)
+  if null squery
+    then return defaultPage
+    else do
+     case parseSearchText squery of
+         Nothing  -> return defaultPage
+         Just query ->
+           if withserver
+             then do
+               mbres <- catch
+                         (profilingSearchClient fuzzy squery >>= return . Just)
+                         (\_ -> return Nothing)
+               case mbres of
+                 Nothing  -> do -- try to restart server:
+                               system "make restart >> SERVER.LOG"
+                               resultFromIndex fuzzy query
+                 Just res -> case reads res of
+                   [((items,et),_)] -> getItemspage fuzzy query "" items et
+                   _                -> return defaultPage
+             else resultFromIndex fuzzy query
  where
   resultFromIndex fuzzy query = do
     index <- readIndex indexDirPath
@@ -118,7 +119,7 @@ getResultPage withserver showall searchtxt
     num           = length items
     maxresults    = if showall then num else maxSearchResults
     showAllButton = hrefInfoBadge
-                      ('?' : string2urlencoded (":all" ++ searchtxt))
+                      ('?' : string2urlencoded (":all" ++ search))
                       [htxt $ "show " ++
                               if num>maxresults then "all" else "scores"]
 
