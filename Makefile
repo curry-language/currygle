@@ -16,8 +16,8 @@ CURRYOPTIONS=:set -time
 # should be stored, e.g.: $(HOME)/public_html
 WEBDIR = $(HOME)/public_html/currygle
 
-# Executable of the Curry Package Manager to instal the webapp:
-CPM := $(CURRYBIN)/cypm
+# Executable of the Curry Package Manager to install the webapp:
+CPM := $(CURRYBIN)/cypm --define CURRY_BIN=$(CURRYBIN)/curry
 
 # Executable of the curry2cgi:
 CURRY2CGI := $(shell which curry2cgi)
@@ -44,7 +44,12 @@ SOURCES = src/*.curry src/*/*.curry
 
 .PHONY: all
 all:
-	@echo "make: index start stop restart install indexer deploy tar clean?"
+	@echo "make: config index start stop restart install indexer deploy tar clean?"
+
+# Show CPM configuration:
+.PHONY: config
+config:
+	$(CPM) config
 
 # Create index:
 .PHONY: index
@@ -134,8 +139,8 @@ deploy: checkdeploy $(WEBDIR)/bin/$(CURRYGLE) | $(WEBDIR)
 webinterface: $(WEBDIR)/main.cgi
 
 $(WEBDIR)/main.cgi: $(SOURCES)
-	$(CPM) exec $(CURRY2CGI) --cpm=$(CPM) --system="$(CURRYHOME)" \
-	  --ulimit=\"-t 300\" -i $(WEBAPPMAIN) -o $@ $(WEBAPPMAIN)
+	$(CPM) exec $(CURRY2CGI) --cpm="\"$(CPM)\"" --system="$(CURRYHOME)" \
+	  --ulimit="\"-t 300\"" -i $(WEBAPPMAIN) -o $@ $(WEBAPPMAIN) -v3
 
 # create tar file with complete web app
 .PHONY: tar
