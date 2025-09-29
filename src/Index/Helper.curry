@@ -1,10 +1,10 @@
------------------------------------------------------------------------
+------------------------------------------------------------------------------
 --- This module defines a `ReadWrite` instance of type `Map` and
 --- a few helper operations.
 ---
 --- @author Michael Hanus
 --- @version May 2025
------------------------------------------------------------------------
+------------------------------------------------------------------------------
 {-# OPTIONS_FRONTEND -Wno-incomplete-patterns #-}
 
 module Index.Helper where
@@ -15,6 +15,7 @@ import System.IO  ( hPutChar )
 import Data.Map
 import RW.Base
 
+------------------------------------------------------------------------------
 toLowerS :: String -> String
 toLowerS s = map toLower s
 
@@ -23,7 +24,7 @@ strip :: String -> String
 strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
 ------------------------------------------------------------------------------
---- `ReadWrite` instance of `Map`.
+-- `ReadWrite` instance of `Map`.
 instance (ReadWrite a,ReadWrite b) => ReadWrite (Map a b) where
   readRW _    ('0' : r0) = (Tip,r0)
   readRW strs ('1' : r0) = (Bin a' b' c' d' e',r5)

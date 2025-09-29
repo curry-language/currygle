@@ -3,28 +3,61 @@
 --- list, so the indexer can use it.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version May 2025
+--- @version September 2025
 ----------------------------------------------------------------------
 
 module Crawler.Crawler ( getAllCurryInfo )
   where
 
+import Control.Monad    ( when )
 import Data.List
 import System.IO
 
 import FlatCurry.Types
 import System.Directory
-import System.FilePath  ( (</>), isExtensionOf, splitDirectories )
+import System.FilePath  ( (</>), isExtensionOf, splitDirectories, dropFileName )
+import System.Process   ( system )
 
+import Crawler.Helper   ( downloadPackageVersions )
 import Crawler.Types
 import Crawler.AltTypes
 import Settings
 
+-- Searches in the given directory path all .cdoc files and returns
+-- their contents.
+-- Since the given directory contains subdirectories named by `PKG-VERS`
+-- (e.g., `base-3.4.0`), deprecated package versions are deleted before
+-- the search is started.
+getAllCurryInfo :: FilePath -> IO [(CurryInfo, String)]
+getAllCurryInfo cdocdir = do
+  deleteDeprecatedPackages cdocdir
+  fcntpkgs <- getCDocPackages cdocdir
+  cipkgs <- mapM readCDoc fcntpkgs
+  return $ [ (ci,pn) | (Just ci, pn) <- cipkgs ]
+ where
+  readCDoc (fn, pn) = do
+    putStrLn $ "Reading file '" ++ fn ++ "'..."
+    cdoc <- openFile fn ReadMode >>= hGetContents
+    return (readCurryInfo cdoc, pn)
+
+-- Delete subdirectories (of the given directory) with name `PKG-VERS`
+-- if this package version is deprecated (according to the infos of Masala).
+deleteDeprecatedPackages :: FilePath -> IO ()
+deleteDeprecatedPackages cdocdir = do
+  pkgvs <- fmap (filter (\(_,_,d) -> d)) downloadPackageVersions
+  mapM_ (\(p,v,_) -> rmdocdir (cdocdir </> p ++ "-" ++ v)) pkgvs
+ where
+  rmdocdir dn = do
+    ex <- doesDirectoryExist dn
+    when ex $ do putStrLn $ "Delete directory '" ++ dn ++ "' (deprecated)"
+                 system $ "/bin/rm -rf " ++ dn
+                 return ()
+  
 -- Searches all CDoc files in the given directory and returns their names
 -- with the corresponding package name (computed from the file path).
 getCDocPackages :: FilePath -> IO [(String, String)]
-getCDocPackages path = do
-  cdocfiles <- getCDocFilePaths path
+getCDocPackages cdocdir = do
+  cdocfiles <- getCDocFilePaths cdocdir
   putStrLn $ "Number of cdoc files to be processed: " ++ show (length cdocfiles)
   return $ map addPackageName cdocfiles
  where
@@ -49,19 +82,6 @@ getCDocFilePaths path = do
                      else do isfile <- doesFileExist path1
                              if isfile then return []
                                        else getCDocFilePaths path1
-
--- Searches in the given directory path all .cdoc files and returns
--- their contents.
-getAllCurryInfo :: FilePath -> IO [(CurryInfo, String)]
-getAllCurryInfo path = do
-  fcntpkgs <- getCDocPackages path
-  cipkgs <- mapM readCDoc fcntpkgs
-  return $ [ (ci,pn) | (Just ci, pn) <- cipkgs ]
- where
-  readCDoc (fn, pn) = do
-    putStrLn $ "Reading file '" ++ fn ++ "'..."
-    cdoc <- openFile fn ReadMode >>= hGetContents
-    return (readCurryInfo cdoc, pn)
 
 -- Reads a CurryInfo from a String. Can handle the two formats,
 -- which are used in existing .cdoc files.

@@ -140,7 +140,7 @@ webinterface: $(WEBDIR)/main.cgi
 
 $(WEBDIR)/main.cgi: $(SOURCES)
 	$(CPM) exec $(CURRY2CGI) --cpm="\"$(CPM)\"" --system="$(CURRYHOME)" \
-	  --ulimit="\"-t 300\"" -i $(WEBAPPMAIN) -o $@ $(WEBAPPMAIN) -v3
+	  --ulimit="\"-t 300\"" -i $(WEBAPPMAIN) -o $@ $(WEBAPPMAIN)
 
 # create tar file with complete web app
 .PHONY: tar

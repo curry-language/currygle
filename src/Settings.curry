@@ -3,7 +3,7 @@
 --- like paths to files and directories, and URLs to which Currygle refers.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version May 2025
+--- @version September 2025
 ------------------------------------------------------------------------------
 
 module Settings
@@ -20,7 +20,7 @@ import PackageConfig ( packageVersion )
 
 --- The version date of Currygle.
 currygleDate :: String
-currygleDate = "28/05/25"
+currygleDate = "29/09/25"
 
 --- The banner of Currygle.
 currygleBanner :: String
