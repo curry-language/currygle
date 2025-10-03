@@ -1,21 +1,34 @@
-----------------------------------------------------------------------
+------------------------------------------------------------------------------
 --- Data types to be used to read CurryInfo (`.cdoc`) files.
 --- The data types are taken from the module `CurryInfo.CDoc` and
 --- duplicated here, since all the other stuff from the CurryDoc package
 --- is not needed.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version May 2025
-----------------------------------------------------------------------
+--- @version October 2025
+------------------------------------------------------------------------------
 
 module Crawler.Types
   where
 
+import Data.Time
 import FlatCurry.Types
 import FlatCurry.FlexRigid
 
+------------------------------------------------------------------------------
+--- The type to represent information about a package which consists of
+--- the package identifier (a string of the form `PACKAGE-VERSION`)
+--- and the last upload time (represented as an integer for efficient
+--- storing and comparison) of the package.
+data PackageInfo = PackageInfo
+  { packageName    :: String
+  , packageUpload  :: Int
+  }
+
+------------------------------------------------------------------------------
+
 -- These are the types defined in the module `CurryDoc.CDoc`.
--- Since Currygle does not import this (large) packages,
+-- Since Currygle does not import this (large) package,
 -- we just redefine the data types here.
 
 --- The information about a Curry module contains

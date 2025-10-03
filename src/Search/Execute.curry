@@ -3,14 +3,14 @@
 --- Currygle index.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version May 2025
+--- @version October 2025
 ------------------------------------------------------------------------------
 
 module Search.Execute
   ( currygleSearch, profilingCurrygleSearch )
  where
 
-import Data.List      ( sortBy )
+import Data.List      ( groupBy, sortBy )
 import System.CPUTime ( getCPUTime )
 
 import Data.Map
@@ -28,7 +28,14 @@ import Settings
 --- with a score for each item (lower scores are better matchings).
 --- If the first argument is `True`, fuzzy search is used.
 currygleSearch :: Bool -> Index -> SearchQuery -> [(IndexItem,Int)]
-currygleSearch fuzzy index sq = toIndexItems index (search fuzzy sq index)
+currygleSearch fuzzy index sq =
+  sortIndexItemsByUpload (toIndexItems index (search fuzzy sq index))
+
+-- Sort index items with identical score by the age of their package.
+sortIndexItemsByUpload :: [(IndexItem,Int)] -> [(IndexItem,Int)]
+sortIndexItemsByUpload items =
+  concatMap (sortBy (\(i1,_) (i2,_) -> uploadOfItem i1 > uploadOfItem i2)) $
+    groupBy (\(_,s1) (_,s2) -> s1==s2) items
 
 -- Converts a search result into a list of index items sorted by their
 -- match score, using the index as a translation.
@@ -129,9 +136,9 @@ filterModuleResults items results =
   filterWithKey (\pos _ -> isModuleItem (Data.Map.lookup pos items)) results
  where
   isModuleItem Nothing                 = False -- should not occur
-  isModuleItem (Just (ModuleItem _ _ _ _))         = True
-  isModuleItem (Just (FunctionItem _ _ _ _ _ _ _)) = False
-  isModuleItem (Just (TypeItem _ _ _ _ _ _))       = False
+  isModuleItem (Just (ModuleItem _ _ _ _ _))         = True
+  isModuleItem (Just (FunctionItem _ _ _ _ _ _ _ _)) = False
+  isModuleItem (Just (TypeItem _ _ _ _ _ _ _))       = False
 
 -- Switch between strict and fuzzy search:
 textSearch :: Bool -> Trie Char (Int, Int) -> String -> Map Int Int

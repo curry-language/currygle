@@ -2,26 +2,25 @@
 --- This module implements a search server for Currygle.
 ---
 --- @author Michael Hanus
---- @version May 2025
+--- @version October 2025
 ----------------------------------------------------------------------
 
 module Server
   ( startServer, stopServer, pingServer, searchClient, profilingSearchClient )
  where
 
-import Data.List          ( isPrefixOf )
+import Data.List        ( isPrefixOf )
 import System.IO
 
 import Network.Socket
-import System.Process     ( sleep )
+import System.Process   ( sleep )
 
-import Index.Helper       ( strip )
+import Index.Helper     ( strip )
 import Index.Indexer
-import Index.Item
 import Options
 import Search.Query
-import Search.Execute
-import Settings           ( indexDirPath, serverSocket )
+import Search.Execute   ( currygleSearch, profilingCurrygleSearch )
+import Settings         ( indexDirPath, serverSocket )
 
 ------------------------------------------------------------------------------
 -- Start the search server on a socket:

@@ -3,7 +3,7 @@
 --- list, so the indexer can use it.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version September 2025
+--- @version October 2025
 ----------------------------------------------------------------------
 
 module Crawler.Crawler ( getAllCurryInfo )
@@ -13,6 +13,7 @@ import Control.Monad    ( when )
 import Data.List
 import System.IO
 
+import Data.Time
 import FlatCurry.Types
 import System.Directory
 import System.FilePath  ( (</>), isExtensionOf, splitDirectories, dropFileName )
@@ -23,17 +24,18 @@ import Crawler.Types
 import Crawler.AltTypes
 import Settings
 
--- Searches in the given directory path all .cdoc files and returns
+-- Searches in the given directory path all `.cdoc` files and returns
 -- their contents.
 -- Since the given directory contains subdirectories named by `PKG-VERS`
 -- (e.g., `base-3.4.0`), deprecated package versions are deleted before
 -- the search is started.
-getAllCurryInfo :: FilePath -> IO [(CurryInfo, String)]
+getAllCurryInfo :: FilePath -> IO [(CurryInfo, PackageInfo)]
 getAllCurryInfo cdocdir = do
-  deleteDeprecatedPackages cdocdir
-  fcntpkgs <- getCDocPackages cdocdir
+  pkginfos <- downloadPackageVersions
+  deleteDeprecatedPackages pkginfos cdocdir
+  fcntpkgs <- getCDocPackages pkginfos cdocdir
   cipkgs <- mapM readCDoc fcntpkgs
-  return $ [ (ci,pn) | (Just ci, pn) <- cipkgs ]
+  return [ (ci,pn) | (Just ci, pn) <- cipkgs ]
  where
   readCDoc (fn, pn) = do
     putStrLn $ "Reading file '" ++ fn ++ "'..."
@@ -42,10 +44,10 @@ getAllCurryInfo cdocdir = do
 
 -- Delete subdirectories (of the given directory) with name `PKG-VERS`
 -- if this package version is deprecated (according to the infos of Masala).
-deleteDeprecatedPackages :: FilePath -> IO ()
-deleteDeprecatedPackages cdocdir = do
-  pkgvs <- fmap (filter (\(_,_,d) -> d)) downloadPackageVersions
-  mapM_ (\(p,v,_) -> rmdocdir (cdocdir </> p ++ "-" ++ v)) pkgvs
+deleteDeprecatedPackages :: [(String,(ClockTime,Bool))] -> FilePath -> IO ()
+deleteDeprecatedPackages pkginfos cdocdir = do
+  mapM_ (\(pkgid,_) -> rmdocdir (cdocdir </> pkgid))
+        (filter (\(_,(_,d)) -> d) pkginfos)
  where
   rmdocdir dn = do
     ex <- doesDirectoryExist dn
@@ -53,20 +55,24 @@ deleteDeprecatedPackages cdocdir = do
                  system $ "/bin/rm -rf " ++ dn
                  return ()
   
--- Searches all CDoc files in the given directory and returns their names
+-- Searches all `.cdoc` files in the given directory and returns their names
 -- with the corresponding package name (computed from the file path).
-getCDocPackages :: FilePath -> IO [(String, String)]
-getCDocPackages cdocdir = do
+getCDocPackages :: [(String,(ClockTime,Bool))] -> FilePath
+                -> IO [(String, PackageInfo)]
+getCDocPackages pkginfos cdocdir = do
   cdocfiles <- getCDocFilePaths cdocdir
   putStrLn $ "Number of cdoc files to be processed: " ++ show (length cdocfiles)
-  return $ map addPackageName cdocfiles
+  return $ map addPackageInfo cdocfiles
  where
   -- Gets for a given `.cdoc` file path a pair consisting of the file path
   -- and the package name (which is the directory containing the `.cdoc` file).
-  addPackageName fn =
+  addPackageInfo fn =
     let fns = splitDirectories fn
-    in if length fns > 1 then (fn, last (init fns))
-                         else (fn, "")
+    in if length fns > 1
+         then let pkgid = last (init fns)
+                  ptime = maybe 0 (clockTimeToInt . fst) (lookup pkgid pkginfos)
+              in (fn, PackageInfo pkgid ptime)
+         else (fn, PackageInfo "" 0)
 
 --- Returns the paths of all `.cdoc` files contained in the directory
 --- (or in subdirectories) provided as an argument.

@@ -3,7 +3,7 @@
 --- and operations to read and write the index in a compact form.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version May 2025
+--- @version October 2025
 ----------------------------------------------------------------------
 
 module Index.Indexer
@@ -78,9 +78,9 @@ createDetMap :: [(Int,IndexItem)] -> Map Int Bool
 createDetMap items = cDetMap items
  where
   cDetMap []                     = Data.Map.empty
-  cDetMap ((_,ModuleItem _ _ _ _):iis) = cDetMap iis
-  cDetMap ((_,TypeItem _ _ _ _ _ _):iis)   = cDetMap iis
-  cDetMap ((x,FunctionItem _ _ _ _ det _ _):iis) =
+  cDetMap ((_,ModuleItem _ _ _ _ _):iis) = cDetMap iis
+  cDetMap ((_,TypeItem _ _ _ _ _ _ _):iis)   = cDetMap iis
+  cDetMap ((x,FunctionItem _ _ _ _ _ det _ _):iis) =
     insert x det (cDetMap iis)
 
 -- Creates a map, where a Int representing the position of a FunctionItem in the IndexItem list
@@ -89,9 +89,9 @@ createFlexMap :: [(Int,IndexItem)] -> Map Int FlexRigidResult
 createFlexMap items = cFlexMap items
  where
   cFlexMap []                     = Data.Map.empty
-  cFlexMap ((_,ModuleItem _ _ _ _):iis) = cFlexMap iis
-  cFlexMap ((_,TypeItem _ _ _ _ _ _):iis)   = cFlexMap iis
-  cFlexMap ((x,FunctionItem _ _ _ _ _ flex _):iis) =
+  cFlexMap ((_,ModuleItem _ _ _ _ _):iis) = cFlexMap iis
+  cFlexMap ((_,TypeItem _ _ _ _ _ _ _):iis)   = cFlexMap iis
+  cFlexMap ((x,FunctionItem _ _ _ _ _ _ flex _):iis) =
     insert x flex (cFlexMap iis)
 
 -- Creates an index from `.cdoc` files (as produced by CurryDoc) stored in
@@ -105,9 +105,9 @@ createIndexFromDir cdocdir = do
   return $ createIndex items
  where
   isClassFunction :: IndexItem -> Bool
-  isClassFunction (ModuleItem _ _ _ _) = False
-  isClassFunction (TypeItem _ _ _ _ _ _)   = False
-  isClassFunction (FunctionItem name _ _ _ _ _ _) = '#' `elem` name
+  isClassFunction (ModuleItem _ _ _ _ _) = False
+  isClassFunction (TypeItem _ _ _ _ _ _ _)   = False
+  isClassFunction (FunctionItem name _ _ _ _ _ _ _) = '#' `elem` name
 
 -- Stores an index in a directory, where the directory is created
 -- if it does not exist yet, by writing all parts of the index into
@@ -130,7 +130,7 @@ writeIndex opts indexpath
   putStrLn $ "Index with " ++ show (size items) ++ " items written."
  where
   writeIndexFile fn d = do
-    printWhenStatus opts $ "Writing index file '" ++ fn ++ "''..."
+    printWhenStatus opts $ "Writing index file '" ++ fn ++ "'..."
     writeDataFile (indexpath </> fn) d
 
 -- Reads the Currygle index from the argument directory.

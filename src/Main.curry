@@ -2,7 +2,7 @@
 --- The main module which combines the indexer and the search server.
 ---
 --- @author Michael Hanus
---- @version May 2025
+--- @version October 2025
 ----------------------------------------------------------------------
 
 module Main ( main ) where
@@ -16,7 +16,7 @@ import Interactive   ( searchInteractive )
 import Index.Indexer ( createIndexFromDir, writeIndex )
 import Options
 import Server        ( startServer, stopServer )
-import Settings      ( indexDirPath, currygleDate )
+import Settings      ( indexDirPath, currygleDate, currygleBanner )
 
 main :: IO ()
 main = do
@@ -24,19 +24,20 @@ main = do
   unless (null args) $ do
     putStrLn $ "Superfluous arguments: " ++ unwords args
     exitWith 1
-  let indexdir = indexDirPath
   when (optIndex opts) $ do
     let docdir = optDocDir opts
     when (null docdir) $ putStrLn "Option '--docdir' missing!" >> exitWith 1
     printWhenStatus opts $ "Creating index from files in '" ++ docdir ++ "'..."
     index <- createIndexFromDir docdir
-    writeIndex opts indexdir index
-    printWhenStatus opts $ "Index created and stored in '" ++ indexdir ++ "'."
+    writeIndex opts indexDirPath index
+    printWhenStatus opts $
+      "Index created and stored in '" ++ indexDirPath ++ "'."
     exitWith 0
   when (optStartServer opts) $ startServer opts >> exitWith 0
   when (optStopServer opts)  $ stopServer  opts >> exitWith 0
   when (optInteractive opts) $ do
-    printWhenStatus opts "Running query search in interactive mode..."
-    searchInteractive opts indexdir
+    printWhenStatus opts $
+      currygleBanner ++ "Running query search in interactive mode..."
+    searchInteractive opts indexDirPath
     exitWith 0
   printUsage

@@ -3,7 +3,7 @@
 --- like paths to files and directories, and URLs to which Currygle refers.
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version September 2025
+--- @version October 2025
 ------------------------------------------------------------------------------
 
 module Settings
@@ -20,16 +20,17 @@ import PackageConfig ( packageVersion )
 
 --- The version date of Currygle.
 currygleDate :: String
-currygleDate = "29/09/25"
+currygleDate = "03/10/25"
 
 --- The banner of Currygle.
 currygleBanner :: String
-currygleBanner = unlines [bannerLine, bannerText, bannerLine]
+currygleBanner = unlines [bannerLine, currygleBannerText, bannerLine]
  where
-  bannerText = "Currygle (Version " ++ packageVersion ++ " of " ++
-               currygleDate ++ ")"
-  bannerLine = take (length bannerText) (repeat '=')
+  bannerLine = take (length currygleBannerText) (repeat '=')
 
+currygleBannerText :: String
+currygleBannerText =
+  "Curr(y)gle (Version " ++ packageVersion ++ " of " ++ currygleDate ++ ")"
 
 --- The maximum amount of results returned by a search.
 maxSearchResults :: Int

@@ -23,14 +23,14 @@ import Control.Applicative ( when )
 
 import Index.Helper       ( strip )
 import Index.Item
-import Index.Indexer
-import Index.Signature
+import Index.Indexer      ( readIndex )
+import Index.Signature    ( prettySig, prettySigs )
 import PackageConfig      ( packageVersion )
 import Options
 import Settings
-import Search.Execute
+import Search.Execute     ( currygleSearch )
 import Search.Query
-import Server             ( profilingSearchClient, searchClient )
+import Server             ( profilingSearchClient )
 
 main :: IO HtmlPage
 main = getUrlParameter >>= runWithUrlParams . urlencoded2string
@@ -159,31 +159,31 @@ searchResults2HTML showscore items = do
    where srcurl = docUrl2SourceCodeUrl docurl
 
   itemToHtml :: (IndexItem,Int) -> IO [[BaseHtml]]
-  itemToHtml (ModuleItem name author pack des, score) = do
-    let docurl = moduleDocumentationUrl pack name
+  itemToHtml (ModuleItem name author pkgid _ des, score) = do
+    let docurl = moduleDocumentationUrl pkgid name
     return $ addLink docurl [] $
       [itemHeader ("module " ++ name) score,
        htxt "authors: ", bold [htxt author], breakline,
-       htxt "package: ", bold [htxt pack], breakline] ++ ppDesc des
-  itemToHtml (FunctionItem name modName pack sig _ _ des, score) = do
-    let cifname = operationAnalysisFile pack modName name
+       htxt "package: ", bold [htxt pkgid], breakline] ++ ppDesc des
+  itemToHtml (FunctionItem name modName pkgid _ sig _ _ des, score) = do
+    let cifname = operationAnalysisFile pkgid modName name
     ciexists <- if null cifname then return False else doesFileExist cifname
     let sname = if null name || isAlpha (head name)
                   then name
                   else "(" ++ name ++ ")"
-        docurl = entityDocumentationUrl pack modName name
+        docurl = entityDocumentationUrl pkgid modName name
     return $ addLink docurl
-            (if ciexists then function2CurryInfoRef pack modName name else []) $
+           (if ciexists then function2CurryInfoRef pkgid modName name else []) $
       [itemHeader (sname ++ " :: " ++ prettySigs sig) score,
        htxt "defined in module: ", bold [htxt modName], breakline,
-       htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des
-  itemToHtml (TypeItem name modName pack isclass cs des, score) = do
-    let docurl = entityDocumentationUrl pack modName name
+       htxt "of package: ", bold [htxt pkgid], breakline] ++ ppDesc des
+  itemToHtml (TypeItem name modName pkgid _ isclass cs des, score) = do
+    let docurl = entityDocumentationUrl pkgid modName name
     return $ addLink docurl [] $
       [itemHeader (if isclass then "class " ++ name else "data " ++ ppType)
                   score,
        htxt "defined in module: ", bold [htxt modName], breakline,
-       htxt "of package: ", bold [htxt pack], breakline] ++ ppDesc des
+       htxt "of package: ", bold [htxt pkgid], breakline] ++ ppDesc des
    where
     -- pretty print the type from the TypeIndex
     ppType = case cs of
@@ -279,8 +279,7 @@ curryglePage contents =
 
 currygleFooter :: [BaseHtml]
 currygleFooter =
-  [par [htxt $ "Curr(y)gle (Version " ++ packageVersion ++ " of " ++
-               currygleDate ++ "), powered by ",
+  [par [htxt $ currygleBannerText ++ ", powered by ",
         ehrefDarkBadge curryURI [htxt "Curry"], nbsp,
         image "images/Curry.ico" "Curry"]]
 

@@ -11,13 +11,14 @@ module Crawler.Helper where
 
 import Control.Monad  ( when )
 
+import Data.Time
 import System.Process ( system )
 import Text.CSV       ( readCSVFile )
 
 ------------------------------------------------------------------------------
--- Retrieve a list of package versions with their deprecated status
--- by querying Masala.
-downloadPackageVersions :: IO [(String,String,Bool)]
+-- Retrieve a list of package identifiers with their last upload time
+-- and the deprecated status by querying Masala.
+downloadPackageVersions :: IO [(String,(ClockTime,Bool))]
 downloadPackageVersions = do
   let csvf = "MASALA.csv"
   ec <- system $ curlCommand ++ " -o '" ++ csvf ++ "' '" ++ downloadURL ++ "'"
@@ -28,7 +29,8 @@ downloadPackageVersions = do
                (\_ -> do putStrLn "Cannot parse deprecation info from Masala!"
                          return [])
  where
-  mapCol col = (col!!0, col!!1, read (col!!3) :: Bool)
+  mapCol [pname,pvers,ptime,pdepr] =
+    (pname ++ "-" ++ pvers, (toClockTime (read ptime), read pdepr :: Bool))
 
 curlCommand :: String
 curlCommand = unwords ["curl","--max-time","20","--silent","--show-error"]
