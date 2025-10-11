@@ -20,7 +20,7 @@ import PackageConfig ( packageVersion )
 
 --- The version date of Currygle.
 currygleDate :: String
-currygleDate = "03/10/25"
+currygleDate = "11/10/25"
 
 --- The banner of Currygle.
 currygleBanner :: String

@@ -1,8 +1,8 @@
 ----------------------------------------------------------------------
---- This module handles writing the html pages for currygle
+--- This module handles writing the HTML pages for Currygle
 ---
 --- @author Helge Knof (with changes by Michael Hanus)
---- @version May 2025
+--- @version October 2025
 ----------------------------------------------------------------------
 
 module WebInterface ( main, searchForm )
@@ -12,8 +12,12 @@ import Data.List      ( init, intercalate, isPrefixOf, last, split )
 import System.IO
 
 import HTML.Base
-import HTML.Styles.Bootstrap4 ( ehrefDarkBadge, kbdInput, hrefInfoBadge )
-import Network.URL         ( string2urlencoded, urlencoded2string )
+import HTML.Styles.Bootstrap4   ( ehref, ehrefDarkBadge, ehrefInfoBadge
+                                , hrefInfoBadge, kbdInput )
+import Language.Curry.Resources ( cpmHomeURL, curryHomeURL, curryPackagesURL
+                                , masalaHomeURL )
+import Network.URL              ( string2urlencoded, urlencoded2string )
+
 import System.Directory    ( doesFileExist )
 import System.FilePath     ( (</>) )
 import System.IOExts       ( evalCmd )
@@ -205,7 +209,9 @@ currygleDescription =
 
 currygleHelpText :: [BaseHtml]
 currygleHelpText =
-  [ h4 [htxt "Options to restrict the search:"]
+  [ h3 [htxt "Welcome to Curry(y)gle!"]
+  , par introText
+  --, h5 [htxt "Options to restrict the search:"]
   , headedTable (map (\(o,s) -> [[bold [htxt o]], [htxt s]])
       [ ("Option:", "Searches for")
       , (":function <f>"
@@ -245,7 +251,28 @@ currygleHelpText =
         , kbdInput [htxt ":fuzzy"], htxt ", a fuzzy text search is used "
         , htxt "to find more results without exact matches."
         ]
+  , hrule, par [italic contactText]
   ]
+ where
+  introText =
+    [ htxt "Curr(y)gle is an API search engine for "
+    , ehrefInfoBadge curryPackagesURL [htxt "Curry packages"]
+    , htxt ". It allows you to search Curry packages published with "
+    , ehrefInfoBadge masalaHomeURL [htxt "Masala"]
+    , htxt " and managed by "
+    , ehrefInfoBadge cpmHomeURL [htxt "CPM"]
+    , htxt ". There are also various "
+    , bold [htxt "options to restrict the search:"]
+    ]
+
+  contactText =
+    [ htxt "If you have comments or suggestions for improvement, "
+    , htxt "you can contact "
+    , ehref "https://www.michaelhanus.de" [htxt "Michael Hanus"]
+    , htxt " or submit an "
+    , ehref "https://github.com/curry-language/currygle/issues" [htxt "issue"]
+    , htxt "."
+    ]
 
 -- Explanation text for the search query field:
 queryExplain :: String
@@ -280,7 +307,7 @@ curryglePage contents =
 currygleFooter :: [BaseHtml]
 currygleFooter =
   [par [htxt $ currygleBannerText ++ ", powered by ",
-        ehrefDarkBadge curryURI [htxt "Curry"], nbsp,
+        ehrefDarkBadge curryHomeURL [htxt "Curry"], nbsp,
         image "images/Curry.ico" "Curry"]]
 
 --- The base URL where Bootstrap4 style files etc are stored.
@@ -295,8 +322,5 @@ favIcon = baseBT4 </> "img" </> "favicon.ico"
 cssIncludes :: [String]
 cssIncludes =
   map (\n -> baseBT4 </> "css" </> n ++ ".css") ["bootstrap.min","curry"]
-
-curryURI :: String
-curryURI = "http://www.curry-lang.org/"
 
 ------------------------------------------------------------------------------
